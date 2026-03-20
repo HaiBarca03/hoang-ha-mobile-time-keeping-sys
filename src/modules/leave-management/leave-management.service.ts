@@ -10,6 +10,9 @@ import { LeaveType } from '../master-data/entities/leave-type.entity';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { JOB_NAMES, QUEUE_NAMES } from 'src/constants';
+import { AttendanceDailyTimesheet } from '../attendance/entities/attendance-daily-timesheet.entity';
+import { RequestDetailOvertime } from './entities/request-detail-overtime.entity';
+import { RequestDetailAdjustment } from './entities/request-detail-adjustment.entity';
 
 @Injectable()
 export class LeaveManagementService {
@@ -25,122 +28,143 @@ export class LeaveManagementService {
   async importFromExternalSource(payload: any, companyId: string) {
     this.logger.log(`>>> BẮT ĐẦU IMPORT: companyId=${companyId}`);
 
-    const items = payload?.data?.items || [];
-    this.logger.log(`>>> Số lượng bản ghi nhận được: ${items.length}`);
+    const item = payload?.result || payload?.data?.items?.[0];
+    if (!item) {
+      this.logger.error('!!! THẤT BẠI: Không tìm thấy dữ liệu hợp lệ');
+      return { success: false, message: 'No data found' };
+    }
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      for (const item of items) {
-        const { record_id, fields } = item;
-        this.logger.log(`--- Đang xử lý record_id: ${record_id} ---`);
+      const externalEmployeeCode = item.User_id?.[0]?.text;
+      const leaveTypeName = item['Leave type'];
+      const record_id = item.SourceID;
+      const approvalProcess = item['Approval process'];
 
-        // 1. Lấy userId từ JSON
-        const externalUserId = fields['Người lập phiếu']?.[0]?.id;
-        const leaveTypeName = fields['Chi tiết loại nghỉ'];
-        this.logger.log(
-          `Dữ liệu từ JSON: userId=${externalUserId}, leaveType=${leaveTypeName}`,
+      // 1. Tìm Employee
+      const employee = await queryRunner.manager.findOne(Employee, {
+        where: { userId: externalEmployeeCode, companyId: companyId },
+      });
+
+      if (!employee) {
+        this.logger.warn(
+          `!!! THẤT BẠI: Không tìm thấy Employee ${externalEmployeeCode}`,
         );
+        await queryRunner.rollbackTransaction();
+        return { success: false, message: `Employee not found` };
+      }
 
-        // 2. Query tìm Employee
-        const employee = await queryRunner.manager.findOne(Employee, {
-          where: { userId: externalUserId, companyId: companyId },
-        });
+      // 2. Xác định RequestType dựa trên Approval process
+      let type = RequestType.LEAVE;
+      if (approvalProcess.includes('tăng ca')) type = RequestType.OVERTIME;
+      else if (approvalProcess.includes('điều chỉnh'))
+        type = RequestType.CORRECTION;
 
-        if (!employee) {
-          this.logger.warn(
-            `!!! THẤT BẠI: Không tìm thấy Employee với userId ${externalUserId} và companyId ${companyId}`,
-          );
-          continue;
-        }
-        this.logger.log(`Thành công: Tìm thấy Employee ID=${employee.id}`);
+      // 3. Xử lý thời gian
+      const startTime = new Date(item['Start time']);
+      const endTime = new Date(item['End time']);
+      const dateString = startTime.toISOString().split('T')[0];
 
-        // 3. Tìm LeaveType
-        const leaveType = await queryRunner.manager.findOne(LeaveType, {
-          where: { leaveTypeName: leaveTypeName, companyId: companyId },
-        });
-        this.logger.log(`LeaveType tìm thấy: ${leaveType?.id || 'NULL'}`);
+      // 4. Tìm/Tạo đơn AttendanceRequest
+      let request = await queryRunner.manager.findOne(AttendanceRequest, {
+        where: { record_id: record_id },
+      });
+      if (!request) {
+        request = new AttendanceRequest();
+        request.record_id = record_id;
+      }
 
-        // 4. Khởi tạo/Cập nhật AttendanceRequest
-        let request = await queryRunner.manager.findOne(AttendanceRequest, {
-          where: { record_id: record_id },
-        });
+      request.request_id = item['Request No.']?.text;
+      request.employee_id = employee.id;
+      request.company_id = companyId;
+      request.status = item.Status;
+      request.type = type;
+      request.applied_date = startTime;
+      request.total_hours = parseFloat(item.Duration) || 0;
+      request.raw_data = item;
+      request.note = item['Reason for leave']?.trim();
 
-        if (!request) {
-          this.logger.log(`Tạo mới AttendanceRequest`);
-          request = new AttendanceRequest();
-          request.record_id = record_id;
-        } else {
-          this.logger.log(`Cập nhật AttendanceRequest cũ: ${request.id}`);
-        }
+      // Tìm LeaveType (nếu có)
+      const leaveType = await queryRunner.manager.findOne(LeaveType, {
+        where: { leaveTypeName: leaveTypeName, companyId: companyId },
+      });
+      request.leave_type_id = leaveType?.id || null;
 
-        const startTime = new Date(fields['Thời gian bắt đầu']);
+      const savedRequest = await queryRunner.manager.save(request);
 
-        request.request_id = fields['Mã đơn']?.[0]?.text;
-        request.employee_id = employee.id;
-        request.company_id = companyId;
-        request.status = fields['Trạng thái duyệt'];
-        request.note = leaveTypeName;
-        request.type = RequestType.LEAVE;
-        request.applied_date = startTime;
-        request.total_hours = fields['Số giờ nghỉ'];
-        request.leave_type_id = leaveType?.id || null;
-        request.raw_data = item;
-
-        const savedRequest = await queryRunner.manager.save(request);
-        this.logger.log(`Đã SAVE AttendanceRequest: ID=${savedRequest.id}`);
-
-        const date = new Date(fields['Thời gian bắt đầu']);
-
-        await this.attendanceQueue.add(
-          JOB_NAMES.CALCULATE_DAILY,
-          {
-            employee_id: employee.id,
-            date: date,
-          },
-          {
-            jobId: `calc-${employee.id}-${date.toISOString().split('T')[0]}`,
-            removeOnComplete: true,
-          },
-        );
-
-        // 5. Khởi tạo/Cập nhật RequestDetailTimeOff
+      // 5. XỬ LÝ LƯU BẢNG DETAIL TƯƠNG ỨNG
+      if (type === RequestType.LEAVE) {
         let detail = await queryRunner.manager.findOne(RequestDetailTimeOff, {
           where: { attendance_request_id: savedRequest.id },
         });
+        if (!detail) detail = new RequestDetailTimeOff();
 
-        if (!detail) {
-          this.logger.log(`Tạo mới Detail`);
-          detail = new RequestDetailTimeOff();
-          detail.attendance_request_id = savedRequest.id;
-        }
-
+        detail.attendance_request_id = savedRequest.id;
         detail.start_time = startTime;
-        detail.end_time = new Date(fields['Thời gian kết thúc']);
-        detail.hours = fields['Số giờ nghỉ'];
+        detail.end_time = endTime;
+        detail.hours = savedRequest.total_hours;
+        detail.leave_type_id = savedRequest.leave_type_id;
         detail.leave_type_details = leaveTypeName;
-        detail.leave_type_id = leaveType?.id || null;
-
         await queryRunner.manager.save(detail);
-        this.logger.log(`Đã SAVE RequestDetailTimeOff thành công.`);
+      } else if (type === RequestType.OVERTIME) {
+        let otDetail = await queryRunner.manager.findOne(
+          RequestDetailOvertime,
+          {
+            where: { attendance_request_id: savedRequest.id },
+          },
+        );
+        if (!otDetail) otDetail = new RequestDetailOvertime();
+
+        otDetail.attendance_request_id = savedRequest.id;
+        otDetail.start_time = startTime;
+        otDetail.end_time = endTime;
+        otDetail.ot_rule_id = 1; // Default rule
+        otDetail.hours_ratio = savedRequest.total_hours;
+        await queryRunner.manager.save(otDetail);
+      } else if (type === RequestType.CORRECTION) {
+        let adjDetail = await queryRunner.manager.findOne(
+          RequestDetailAdjustment,
+          {
+            where: { attendance_request_id: savedRequest.id },
+          },
+        );
+        if (!adjDetail) adjDetail = new RequestDetailAdjustment();
+
+        adjDetail.attendance_request_id = savedRequest.id;
+        adjDetail.replenishment_time = startTime; // Giờ bổ sung
+        await queryRunner.manager.save(adjDetail);
       }
 
-      this.logger.log(`>>> CHUẨN BỊ COMMIT TRANSACTION....`);
       await queryRunner.commitTransaction();
-      this.logger.log(`>>> TRANSACTION DONE!`);
 
-      return { success: true, message: `Successfully processed items.` };
-    } catch (error) {
-      this.logger.error(
-        '!!! LỖI TRONG QUÁ TRÌNH XỬ LÝ - ROLLBACK NGAY LẬP TỨC',
+      // 6. KIỂM TRA TIMESHEET ĐỂ PUSH QUEUE
+      const existingTimesheet = await queryRunner.manager.findOne(
+        AttendanceDailyTimesheet,
+        {
+          where: { employee_id: employee.id, attendance_date: startTime },
+        },
       );
+
+      if (existingTimesheet) {
+        await this.attendanceQueue.add(
+          JOB_NAMES.CALCULATE_DAILY,
+          { employee_id: employee.id, date: startTime },
+          {
+            jobId: `calc-${employee.id}-${dateString}`,
+            removeOnComplete: true,
+          },
+        );
+      }
+
+      return { success: true, requestId: savedRequest.id };
+    } catch (error) {
       await queryRunner.rollbackTransaction();
-      this.logger.error('Chi tiết lỗi:', error.stack);
+      this.logger.error('!!! LỖI:', error.stack);
       throw error;
     } finally {
-      this.logger.log(`>>> GIẢI PHÓNG QUERY RUNNER`);
       await queryRunner.release();
     }
   }
