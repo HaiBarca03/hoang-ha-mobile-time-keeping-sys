@@ -147,25 +147,76 @@ export class AttendanceService {
 
   async getTimesheetByDate(companyId: string, date: string) {
     try {
-      const attendanceDate = new Date(date);
-
-      const timesheets = await this.timesheetRepo
+      const qb = this.timesheetRepo
         .createQueryBuilder('timesheet')
         .leftJoinAndSelect('timesheet.employee', 'employee')
-        .leftJoinAndSelect('timesheet.punches', 'punches')
-        .leftJoinAndSelect('timesheet.requests', 'requests')
-        .where('timesheet.company_id = :companyId', { companyId })
-        .andWhere('timesheet.attendance_date = :attendanceDate', {
-          attendanceDate,
-        })
-        .orderBy('employee.fullName', 'ASC')
-        .getMany();
+        .where('timesheet.company_id = :companyId', { companyId });
 
-      return timesheets;
+      // yyyy-mm-dd
+      const isFullDate = /^\d{4}-\d{2}-\d{2}$/.test(date);
+
+      // yyyy-mm
+      const isMonthOnly = /^\d{4}-\d{2}$/.test(date);
+
+      if (isFullDate) {
+        const attendanceDate = new Date(date);
+
+        qb.andWhere('DATE(timesheet.attendance_date) = :attendanceDate', {
+          attendanceDate: date, // truyền string yyyy-mm-dd luôn cho an toàn
+        });
+      } else if (isMonthOnly) {
+        const [year, month] = date.split('-').map(Number);
+
+        qb.andWhere('timesheet.year = :year', { year }).andWhere(
+          'timesheet.month = :month',
+          { month },
+        );
+      } else {
+        throw new Error(
+          'Date format không hợp lệ. Dùng yyyy-mm-dd hoặc yyyy-mm',
+        );
+      }
+
+      const timesheets = await qb.orderBy('employee.fullName', 'ASC').getMany();
+
+      return timesheets.map((ts) => {
+        const dateObj = new Date(ts.attendance_date);
+        const dayStr = dateObj.getDate().toString().padStart(2, '0');
+
+        return {
+          'Họ và tên': ts.employee?.fullName || 'N/A',
+          'check-in': this.formatTimeToVietnam(ts.check_in_raw ?? undefined),
+          'user-id': ts.employee.userId,
+          'check-out': this.formatTimeToVietnam(ts.check_out_raw ?? undefined),
+          'Tổng công': parseFloat(String(ts.adjustment_hours ?? 0)),
+          'Nghỉ phép': parseFloat(String(ts.leave_hours ?? 0)),
+          OT: parseFloat(String(ts.ot_hours ?? 0)),
+          Remote: parseFloat(String(ts.remote_hours ?? 0)),
+          'Không phép': ts.missing_check_in && ts.missing_check_out ? 1 : 0,
+          Ngày: `Ngày ${dayStr}`,
+          Tháng: `Tháng ${ts.month}/${ts.year}`,
+        };
+      });
     } catch (error) {
       console.error('❌ getTimesheetByDate ERROR:', error);
       throw error;
     }
+  }
+
+  // Hàm bổ trợ format giờ
+  // Thêm dấu ? sau tên biến date để chấp nhận undefined
+  private formatTimeToVietnam(date?: Date | string | null): string {
+    if (!date) return '--';
+
+    const d = new Date(date);
+    // Kiểm tra xem date có hợp lệ không
+    if (isNaN(d.getTime())) return '--';
+
+    const hours = d.getUTCHours() + 7;
+    const finalHours = hours >= 24 ? hours - 24 : hours;
+    const minutes = d.getUTCMinutes();
+
+    return `${finalHours}h${minutes.toString().padStart(2, '0')}`;
   }
 
   async getMonthlyTimesheet(
