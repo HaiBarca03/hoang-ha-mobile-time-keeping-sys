@@ -16,6 +16,7 @@ import { AttendanceRequest } from '../../leave-management/entities/attendance-re
 
 @ObjectType()
 @Entity('attendance_daily_timesheets')
+@Index(['company_id', 'month', 'year'])
 @Index(['employee_id', 'attendance_date'], { unique: true })
 export class AttendanceDailyTimesheet extends BaseEntity {
   @Field(() => ID)

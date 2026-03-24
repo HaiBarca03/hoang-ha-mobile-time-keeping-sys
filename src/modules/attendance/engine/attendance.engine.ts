@@ -37,7 +37,7 @@ export class AttendanceEngine {
     private workdayStrategy: WorkdayCalculationStrategy,
     private leaveStrategy: LeaveStrategy,
     private correctionStrategy: CorrectionStrategy,
-  ) {}
+  ) { }
 
   async calculateDailyForEmployee(
     employeeId: string,
@@ -140,7 +140,17 @@ export class AttendanceEngine {
     return result;
   }
 
+  private employeeCache = new Map<string, { data: Employee; expireAt: number }>();
+
   private async getEmployee(id: string): Promise<Employee> {
+    const now = Date.now();
+    const cached = this.employeeCache.get(id);
+
+    // Cache valid for 10 minutes
+    if (cached && cached.expireAt > now) {
+      return cached.data;
+    }
+
     const employee = await this.employeeRepo.findOne({
       where: { id },
       relations: [
@@ -156,6 +166,17 @@ export class AttendanceEngine {
 
     if (!employee) {
       throw new Error(`Employee with ID ${id} not found`);
+    }
+
+    this.employeeCache.set(id, { data: employee, expireAt: now + 10 * 60 * 1000 });
+
+    // Prevent memory leak by cleaning up old keys occasionally
+    if (this.employeeCache.size > 1000) {
+      for (const [key, value] of this.employeeCache.entries()) {
+        if (value.expireAt <= Date.now()) {
+          this.employeeCache.delete(key);
+        }
+      }
     }
 
     return employee;

@@ -8,6 +8,7 @@ import { GraphQLJSON } from 'graphql-type-json';
 
 @ObjectType()
 @Entity('attendance_punch_records')
+@Index(['employee_id', 'punch_time'])
 export class AttendancePunchRecord extends BaseEntity {
   @Field(() => ID)
   @Column({ type: 'bigint' })
