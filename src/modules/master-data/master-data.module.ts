@@ -15,7 +15,6 @@ import { LeavePolicyRule } from "./entities/leave-policy-rule.entity";
 import { JobLevel } from "./entities/job-level.entity";
 import { TimesheetAdjustmentType } from "./entities/timesheet-adjustment-type.entity";
 import { WorkLocation } from "./entities/work-locations.entity";
-import { MasterDataResolver } from "./graphql/resolvers/master-data.resolver";
 import { Department } from "./entities/department.entity";
 import { MasterDataController } from "./master-data.controller";
 
@@ -41,8 +40,8 @@ import { MasterDataController } from "./master-data.controller";
         ]),
     ],
     controllers: [MasterDataController],
-    providers: [MasterDataService, MasterDataResolver],
+    providers: [MasterDataService],
     exports: [MasterDataService],
 })
 
-export class MasterDataModule {}
+export class MasterDataModule { }

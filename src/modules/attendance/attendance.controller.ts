@@ -17,8 +17,6 @@ import {
 import { AttendanceService } from './attendance.service';
 import { AttendanceRecordService } from './engine/services/attendance-record.service';
 import { BatchPunchResultDto } from './dto/batch-punch-result.dto';
-import { GenerateMonthlyTimesheetDto } from './engine/dto/generate-monthly-timesheet.dto';
-import { parse } from 'date-fns';
 
 @ApiTags('attendance')
 @Controller('attendance')
@@ -26,7 +24,7 @@ export class AttendanceController {
   constructor(
     private readonly attendanceService: AttendanceService,
     private readonly recordService: AttendanceRecordService,
-  ) {}
+  ) { }
 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

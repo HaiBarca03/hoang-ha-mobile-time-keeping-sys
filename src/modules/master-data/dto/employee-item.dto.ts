@@ -59,13 +59,13 @@ export class EmployeeItemDto {
   @ApiProperty() phoneNumber: string;
   @ApiProperty() gender: string;
   @ApiProperty({ nullable: true })
-    birthday: string | null;
+  birthday: string | null;
 
-    @ApiProperty({ nullable: true })
-    joinedAt: string | null;
+  @ApiProperty({ nullable: true })
+  joinedAt: string | null;
 
-    @ApiProperty({ nullable: true })
-    resignedAt: string | null;
+  @ApiProperty({ nullable: true })
+  resignedAt: string | null;
   @ApiProperty() standardWorkdays: number;
   @ApiProperty() companyId: string;
 
@@ -88,7 +88,7 @@ export class EmployeeItemDto {
   departments: DepartmentDto[];
 
   @ApiProperty({ type: ManagerDto, nullable: true })
-   manager: ManagerDto | null;
+  manager: ManagerDto | null;
 }
 
 export class PaginationMetaDto {

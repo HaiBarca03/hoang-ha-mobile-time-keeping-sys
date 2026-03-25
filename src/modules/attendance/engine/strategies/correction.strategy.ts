@@ -5,7 +5,7 @@ import { CalculationContext } from '../dto/calculation-context.dto';
 import {
   AttendanceRequest,
   RequestType,
-} from '../../../leave-management/entities/attendance-request.entity';
+} from '../../../approval-management/entities/attendance-request.entity';
 
 @Injectable()
 export class CorrectionStrategy {
@@ -14,7 +14,7 @@ export class CorrectionStrategy {
   constructor(
     @InjectRepository(AttendanceRequest)
     private requestRepo: Repository<AttendanceRequest>,
-  ) {}
+  ) { }
 
   async process(context: CalculationContext): Promise<void> {
     const { employee, date, punches } = context;

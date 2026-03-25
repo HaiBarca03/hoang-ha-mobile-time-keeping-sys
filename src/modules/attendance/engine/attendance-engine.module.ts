@@ -15,7 +15,7 @@ import { ShiftResolverService } from './services/shift-resolver.service';
 // import { RuleFactoryService } from './services/rule-factory.service';
 // import { OvertimeRequest } from 'src/modules/leave-management/entities/overtime-request.entity';
 import { Shift } from 'src/modules/master-data/entities/shift.entity';
-import { LeaveManagementModule } from 'src/modules/leave-management/leave-management.module';
+import { ApprovalManagementModule } from 'src/modules/approval-management/approval-management.module';
 import { AttendanceMethod } from 'src/modules/master-data/entities/attendance-method.entity';
 import { AttendanceRecordService } from './services/attendance-record.service';
 import { LeaveStrategy } from './strategies/leave.strategy';
@@ -40,7 +40,7 @@ import { CorrectionStrategy } from './strategies/correction.strategy';
       LeavePolicyRule,
       Shift,
     ]),
-    forwardRef(() => LeaveManagementModule),
+    forwardRef(() => ApprovalManagementModule),
   ],
   providers: [
     AttendanceEngine,
@@ -59,4 +59,4 @@ import { CorrectionStrategy } from './strategies/correction.strategy';
   ],
   exports: [AttendanceEngine, AttendanceRecordService],
 })
-export class AttendanceEngineModule {}
+export class AttendanceEngineModule { }

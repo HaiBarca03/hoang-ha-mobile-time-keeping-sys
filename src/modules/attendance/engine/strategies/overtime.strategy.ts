@@ -5,7 +5,7 @@ import { CalculationContext } from '../dto/calculation-context.dto';
 import {
   AttendanceRequest,
   RequestType,
-} from '../../../leave-management/entities/attendance-request.entity';
+} from '../../../approval-management/entities/attendance-request.entity';
 import { differenceInMinutes, isBefore, max, min } from 'date-fns';
 
 @Injectable()
@@ -15,7 +15,7 @@ export class OvertimeStrategy {
   constructor(
     @InjectRepository(AttendanceRequest)
     private requestRepo: Repository<AttendanceRequest>,
-  ) {}
+  ) { }
 
   async process(context: CalculationContext): Promise<void> {
     const { employee, date, punches, shiftContext } = context;
