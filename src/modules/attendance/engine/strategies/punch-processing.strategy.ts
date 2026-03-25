@@ -175,29 +175,5 @@ export class PunchProcessingStrategy {
     return dt;
   }
 
-  async getRawPunches(
-    context: CalculationContext,
-  ): Promise<AttendancePunchRecord[]> {
-    this.logger.debug(`getRawPunches called`);
 
-    const employeeId = context.employee.id;
-    const date = context.date;
-
-    const startRange = new Date(date);
-    startRange.setHours(0, 0, 0, 0);
-
-    const endRange = new Date(date);
-    endRange.setDate(endRange.getDate() + 1);
-    endRange.setHours(4, 0, 0, 0);
-
-    this.logger.debug(`Querying punches again for debug`);
-
-    return await this.punchRecordRepo.find({
-      where: {
-        employee_id: employeeId,
-        punch_time: Between(startRange, endRange),
-      },
-      order: { punch_time: 'ASC' },
-    });
-  }
 }

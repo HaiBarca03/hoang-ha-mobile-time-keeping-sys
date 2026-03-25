@@ -17,25 +17,17 @@ export class ShiftResolverService {
   async resolveShift(context: CalculationContext): Promise<ShiftContext> {
     const { employee } = context;
     const defaultShiftId = employee.attendanceGroup?.defaultShiftId;
+    const defaultShift = employee.attendanceGroup?.defaultShift;
 
-    if (!defaultShiftId) {
+    if (!defaultShiftId || !defaultShift) {
       this.logger.error(
         `Nhân viên ${employee.id} không có ca mặc định (defaultShiftId).`,
       );
       throw new Error(`No default shift defined for employee group`);
     }
 
-    const shift = await this.shiftRepo.findOne({
-      where: { id: defaultShiftId },
-      relations: ['restRules'],
-    });
-
-    if (!shift) {
-      throw new Error(`Shift not found: ${defaultShiftId}`);
-    }
-
     context.isConfiguredOffDay = false;
 
-    return new ShiftContext(shift);
+    return new ShiftContext(defaultShift);
   }
 }

@@ -1,20 +1,20 @@
 import { Injectable } from "@nestjs/common";
-import { RawPunchInput } from "../../graphql/inputs/raw-punch.input";
+import { RawPunchInputDto } from "../dto/raw-punch.input";
 
 @Injectable()
 export class AttendanceRecordService {
-  flattenLarkPunches(larkData: any, companyId: string): RawPunchInput[] {
-    const flattenedPunches: RawPunchInput[] = [];
+  flattenLarkPunches(larkData: any, companyId: string): RawPunchInputDto[] {
+    const flattenedPunches: RawPunchInputDto[] = [];
 
     larkData.user_task_results.forEach(userTask => {
       userTask.records.forEach(record => {
-        
+        const day = userTask.day;
         if (record.check_in_record?.record_id) {
-          flattenedPunches.push(this.mapToRawPunch(userTask, record, 'IN', companyId));
+          flattenedPunches.push(this.mapToRawPunch(userTask, record, 'IN', companyId, day));
         }
 
         if (record.check_out_record?.record_id) {
-          flattenedPunches.push(this.mapToRawPunch(userTask, record, 'OUT', companyId));
+          flattenedPunches.push(this.mapToRawPunch(userTask, record, 'OUT', companyId, day));
         }
       });
     });
@@ -22,7 +22,7 @@ export class AttendanceRecordService {
     return flattenedPunches;
   }
 
-  private mapToRawPunch(userTask: any, record: any, type: 'IN' | 'OUT', companyId: string): RawPunchInput {
+  private mapToRawPunch(userTask: any, record: any, type: 'IN' | 'OUT', companyId: string, day: number): RawPunchInputDto {
     const isCheckIn = type === 'IN';
     const larkRecord = isCheckIn ? record.check_in_record : record.check_out_record;
     const result = isCheckIn ? record.check_in_result : record.check_out_result;
@@ -30,10 +30,11 @@ export class AttendanceRecordService {
 
     return {
       company_id: companyId,
-      external_user_id: userTask.user_id, 
-      punch_time: new Date(parseInt(larkRecord.check_time) * 1000),
+      external_user_id: userTask.user_id,
+      punch_time: new Date(parseInt(larkRecord.check_time) * 1000).toISOString(),
       lark_record_id: larkRecord.record_id,
       punch_type: type,
+      day: day,
       punch_result: result,
       source_type: larkRecord.is_wifi ? 'WIFI' : 'GPS',
       latitude: larkRecord.latitude,
@@ -42,7 +43,7 @@ export class AttendanceRecordService {
       device_id: larkRecord.device_id,
       ssid: larkRecord.ssid,
       photo_url: larkRecord.photo_urls?.[0] || null,
-      shift_time_target: targetShiftTime ? new Date(parseInt(targetShiftTime) * 1000) : undefined,
+      shift_time_target: targetShiftTime ? new Date(parseInt(targetShiftTime) * 1000).toISOString() : undefined,
       raw_payload: larkRecord,
     };
   }

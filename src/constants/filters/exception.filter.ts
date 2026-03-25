@@ -5,7 +5,6 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { GqlArgumentsHost } from '@nestjs/graphql'; // Cần import cái này
 import { ValidationError } from 'class-validator';
 import { Response } from 'express';
 import { BusinessCodes } from 'src/constants/business.code';
@@ -22,10 +21,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
   }
 
   catch(exception: unknown, host: ArgumentsHost) {
-    if ((host as any).getType() === 'graphql') {
-      return exception; 
-    }
-
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
 

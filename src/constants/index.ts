@@ -15,5 +15,3 @@ export * from './overtime-conversion.enum';
 export * from './remote-request-type.enum';
 
 export * from './work-method.enum';
-
-export * from './queue.constants';
