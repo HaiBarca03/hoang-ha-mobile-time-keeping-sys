@@ -6,7 +6,6 @@ import {
   OneToMany,
   Index,
   ManyToMany,
-  UpdateDateColumn,
 } from 'typeorm';
 import { BaseEntity } from '../../../database/entities/base.entity';
 import { Company } from './company.entity';
@@ -23,6 +22,10 @@ export class Department extends BaseEntity {
   @Column({ name: 'company_id', type: 'bigint' })
   companyId: string;
 
+  @Index({ unique: true })
+  @Column({ name: 'origin_id', type: 'varchar', unique: true, nullable: true })
+  originId: string;
+
   @Column({ name: 'department_name', type: 'varchar' })
   departmentName: string;
 
@@ -38,7 +41,9 @@ export class Department extends BaseEntity {
     default: DepartmentStatus.ACTIVE,
   })
   status: DepartmentStatus;
-  
+
+  // --- Relationships ---
+
   @ManyToOne(() => Company)
   @JoinColumn({ name: 'company_id' })
   company: Company;

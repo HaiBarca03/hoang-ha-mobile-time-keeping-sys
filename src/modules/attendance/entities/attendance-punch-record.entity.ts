@@ -73,7 +73,7 @@ export class AttendancePunchRecord extends BaseEntity {
   @Column({ type: 'integer', default: 0 })
   retry_count: number;
 
-  @Index() // Dùng để khóa các bản ghi theo phiên chạy (job)
+  @Index()
   @Column({ type: 'varchar', nullable: true })
   job_id?: string | null;
 

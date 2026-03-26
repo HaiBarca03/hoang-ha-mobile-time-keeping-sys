@@ -12,12 +12,27 @@ import { BusinessCodes } from 'src/constants/business.code';
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private formatValidationErrors(errors: ValidationError[]): any[] {
-    return errors.map((error) => {
-      return {
-        field: error.property,
-        errors: Object.values(error.constraints || {}),
-      };
-    });
+    const formattedErrors: any[] = [];
+
+    const recurse = (error: ValidationError, parentProperty = '') => {
+      const propertyPath = parentProperty
+        ? `${parentProperty}.${error.property}`
+        : error.property;
+
+      if (error.constraints) {
+        formattedErrors.push({
+          field: propertyPath,
+          errors: Object.values(error.constraints),
+        });
+      }
+
+      if (error.children && error.children.length > 0) {
+        error.children.forEach((child) => recurse(child, propertyPath));
+      }
+    };
+
+    errors.forEach((error) => recurse(error));
+    return formattedErrors;
   }
 
   catch(exception: unknown, host: ArgumentsHost) {

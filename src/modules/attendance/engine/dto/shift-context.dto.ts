@@ -8,7 +8,7 @@ export class ShiftContext {
   constructor(shift?: Shift) {
     if (shift) {
       this.shift = shift;
-      this.restRules = shift.restRules || [];
+      this.restRules = shift.restRule ? [shift.restRule] : [];
     }
   }
 

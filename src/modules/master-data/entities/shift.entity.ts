@@ -1,8 +1,15 @@
-import { Entity, Column, ManyToOne, JoinColumn, Index, OneToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  Index,
+  ManyToMany,
+} from 'typeorm';
 import { BaseEntity } from '../../../database/entities/base.entity';
 import { Company } from './company.entity';
-// import { ShiftRule } from './shift-rule.entity';
 import { ShiftRestRule } from './shift-rest-rule.entity';
+import { AttendanceGroup } from './attendance-group.entity';
 
 @Entity('shifts')
 @Index(['companyId', 'shiftName'], { unique: true })
@@ -11,15 +18,15 @@ export class Shift extends BaseEntity {
   @Column({ name: 'company_id', type: 'bigint' })
   companyId: string;
 
+  @Index({ unique: true })
+  @Column({ name: 'origin_id', type: 'varchar', unique: true, nullable: true })
+  originId: string;
+
   @Column({ name: 'code', type: 'varchar', length: 50 })
   code: string;
 
   @Column({ name: 'shift_name', type: 'varchar' })
   shiftName: string;
-
-  @ManyToOne(() => Company)
-  @JoinColumn({ name: 'company_id' })
-  company: Company;
 
   @Column({ name: 'start_time', type: 'timestamptz' })
   startTime: Date;
@@ -36,10 +43,19 @@ export class Shift extends BaseEntity {
   @Column({ name: 'shift_hours', type: 'float', default: 8 })
   shiftHours: number;
 
-  // @Field(() => ShiftRule, { nullable: true })
-  // @OneToOne(() => ShiftRule, (rule) => rule.shift)
-  // rule: ShiftRule;
+  @Column({ name: 'shift_rest_rule_id', type: 'bigint', nullable: true })
+  shiftRestRuleId: string;
 
-  @OneToMany(() => ShiftRestRule, (restRule) => restRule.shift)
-  restRules: ShiftRestRule[];
+  // --- Relationships ---
+
+  @ManyToOne(() => Company)
+  @JoinColumn({ name: 'company_id' })
+  company: Company;
+
+  @ManyToOne(() => ShiftRestRule, (restRule) => restRule.shifts)
+  @JoinColumn({ name: 'shift_rest_rule_id' })
+  restRule: ShiftRestRule;
+
+  @ManyToMany(() => AttendanceGroup, (group) => group.shifts)
+  attendanceGroups: AttendanceGroup[];
 }

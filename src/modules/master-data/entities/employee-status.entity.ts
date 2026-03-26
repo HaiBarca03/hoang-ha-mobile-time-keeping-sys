@@ -8,12 +8,14 @@ export class EmployeeStatus extends BaseEntity {
   @Column({ name: 'company_id', type: 'bigint' })
   companyId: string;
 
+  @Index()
   @Column({ name: 'code', type: 'varchar', length: 50 })
-  @Index() 
-  code: string; 
+  code: string;
 
   @Column({ name: 'status_name', type: 'varchar' })
   statusName: string;
+
+  // --- Relationships ---
 
   @ManyToOne(() => Company)
   @JoinColumn({ name: 'company_id' })

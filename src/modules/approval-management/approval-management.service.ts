@@ -145,7 +145,6 @@ export class ApprovalManagementService {
           otDetail.attendance_request_id = savedRequest.id;
           otDetail.start_time = startTime;
           otDetail.end_time = endTime;
-          otDetail.ot_rule_id = 1;
           otDetail.hours_ratio = savedRequest.total_hours;
           await queryRunner.manager.save(otDetail);
         }

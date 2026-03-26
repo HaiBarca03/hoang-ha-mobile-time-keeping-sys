@@ -157,7 +157,7 @@ export class AttendanceEngine {
         'company',
         'attendanceGroup',
         'attendanceGroup.defaultShift',
-        'attendanceGroup.defaultShift.restRules',
+        'attendanceGroup.defaultShift.restRule',
         'attendanceMethod',
         'employeeType',
         'jobLevel',

@@ -1,4 +1,4 @@
-import { Entity, Column, OneToMany } from 'typeorm';
+import { Entity, Column, OneToMany, Index } from 'typeorm';
 import { BaseEntity } from '../../../database/entities/base.entity';
 import { AttendanceMonthSetting } from '../../attendance/entities/attendance-month-setting.entity';
 import { AttendanceMonthlyTimesheet } from '../../attendance/entities/attendance-monthly-timesheet.entity';
@@ -11,18 +11,24 @@ export class Company extends BaseEntity {
   @Column({ name: 'company_name', type: 'varchar' })
   companyName: string;
 
-  @OneToMany(() => AttendanceDailyTimesheet, ts => ts.company)
+  @Index({ unique: true })
+  @Column({ name: 'origin_id', type: 'varchar', unique: true, nullable: true })
+  originId: string;
+
+  // --- Relationships ---
+
+  @OneToMany(() => AttendanceDailyTimesheet, (ts) => ts.company)
   attendanceTimesheets: AttendanceDailyTimesheet[];
 
-  @OneToMany(() => AttendanceMonthSetting, setting => setting.company)
+  @OneToMany(() => AttendanceMonthSetting, (setting) => setting.company)
   attendanceMonthSettings: AttendanceMonthSetting[];
 
-  @OneToMany(() => AttendanceMonthlyTimesheet, ts => ts.company)
+  @OneToMany(() => AttendanceMonthlyTimesheet, (ts) => ts.company)
   attendanceMonthlyTimesheets: AttendanceMonthlyTimesheet[];
 
-  @OneToMany(() => AttendancePunchRecord, rec => rec.company)
+  @OneToMany(() => AttendancePunchRecord, (rec) => rec.company)
   attendancePunchRecords: AttendancePunchRecord[];
 
-  @OneToMany(() => Employee, employee => employee.company)
+  @OneToMany(() => Employee, (employee) => employee.company)
   employees: Employee[];
 }

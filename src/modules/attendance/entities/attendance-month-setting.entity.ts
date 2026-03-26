@@ -18,9 +18,9 @@ export class AttendanceMonthSetting extends BaseEntity {
   standard_workdays: number;
 
   @Column({ type: 'date', nullable: true })
-  closing_date: Date;
+  closing_date?: Date | null;
 
-  @ManyToOne(() => Company, company => company.attendanceMonthSettings)
+  @ManyToOne(() => Company, (company) => company.attendanceMonthSettings)
   @JoinColumn({ name: 'company_id' })
   company: Company;
 }

@@ -8,12 +8,14 @@ export class EmployeeType extends BaseEntity {
   @Column({ name: 'company_id', type: 'bigint' })
   companyId: string;
 
-  @Column({ name: 'code', type: 'varchar', length: 50 })
   @Index()
+  @Column({ name: 'code', type: 'varchar', length: 50 })
   code: string;
 
   @Column({ name: 'type_name', type: 'varchar' })
   typeName: string;
+
+  // --- Relationships ---
 
   @ManyToOne(() => Company)
   @JoinColumn({ name: 'company_id' })

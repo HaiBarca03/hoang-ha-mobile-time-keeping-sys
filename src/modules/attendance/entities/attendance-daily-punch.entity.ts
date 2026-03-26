@@ -17,11 +17,11 @@ export class AttendanceDailyPunch extends BaseEntity {
   @Column({ type: 'timestamp', nullable: true })
   check_out_time?: Date | null;
 
-  @Column({ nullable: true })
-  check_in_result: string;
+  @Column({ type: 'text', nullable: true })
+  check_in_result?: string | null;
 
-  @Column({ nullable: true })
-  check_out_result: string;
+  @Column({ type: 'text', nullable: true })
+  check_out_result?: string | null;
 
   @Column({ type: 'decimal', precision: 6, scale: 2, default: 0 })
   late_hours: number;
@@ -41,7 +41,7 @@ export class AttendanceDailyPunch extends BaseEntity {
   @Column({ type: 'timestamp', nullable: true })
   check_out_actual: Date | null;
 
-  @ManyToOne(() => AttendanceDailyTimesheet, ts => ts.punches)
+  @ManyToOne(() => AttendanceDailyTimesheet, (ts) => ts.punches)
   @JoinColumn({ name: 'daily_timesheet_id' })
   daily_timesheet: AttendanceDailyTimesheet;
 }
