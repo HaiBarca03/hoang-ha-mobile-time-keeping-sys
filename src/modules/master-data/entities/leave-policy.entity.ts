@@ -1,4 +1,11 @@
-import { Entity, Column, ManyToOne, JoinColumn, Index, OneToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  Index,
+  OneToMany,
+} from 'typeorm';
 import { BaseEntity } from '../../../database/entities/base.entity';
 import { Company } from './company.entity';
 import { LeavePolicyRule } from './leave-policy-rule.entity';
@@ -12,8 +19,16 @@ export class LeavePolicy extends BaseEntity {
   @Column({ name: 'policy_name', type: 'varchar' })
   policyName: string;
 
-  @Column({ name: 'standard_workdays_in_policy', type: 'decimal', precision: 6, scale: 2, nullable: true })
+  @Column({
+    name: 'standard_workdays_in_policy',
+    type: 'decimal',
+    precision: 6,
+    scale: 2,
+    nullable: true,
+  })
   standardWorkdaysInPolicy: number;
+
+  // --- Relationships ---
 
   @ManyToOne(() => Company)
   @JoinColumn({ name: 'company_id' })

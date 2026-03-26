@@ -2,7 +2,6 @@ import { DataSource } from 'typeorm';
 import { faker } from '@faker-js/faker/locale/vi';
 import { random, randomDateBetween, randomFromArray } from './seed-utils';
 
-// Entities (giữ nguyên import của bạn)
 import { Company } from '../../modules/master-data/entities/company.entity';
 import { Employee } from '../../modules/master-data/entities/employee.entity';
 import { Shift } from '../../modules/master-data/entities/shift.entity';
@@ -13,32 +12,62 @@ import { EmployeeType } from '../../modules/master-data/entities/employee-type.e
 import { EmployeeStatus } from '../../modules/master-data/entities/employee-status.entity';
 import { LeaveType } from '../../modules/master-data/entities/leave-type.entity';
 import { AttendanceMethod } from '../../modules/master-data/entities/attendance-method.entity';
-import { TimesheetAdjustmentType } from '../../modules/master-data/entities/timesheet-adjustment-type.entity';
 import { WorkLocation } from '../../modules/master-data/entities/work-locations.entity';
 import { Department } from '../../modules/master-data/entities/department.entity';
-// import { ShiftAssignment } from '../../modules/attendance/entities/shift-assignment.entity';
 import { LeavePolicy } from '../../modules/master-data/entities/leave-policy.entity';
 import { LeavePolicyRule } from '../../modules/master-data/entities/leave-policy-rule.entity';
 
-import { EmploymentStatusCode } from 'src/constants';
+import { Holiday } from 'src/modules/attendance/entities/holidays.entity';
 
 export const initDataSeed = async (dataSource: DataSource) => {
-  console.log('🧹 Bắt đầu seed dữ liệu mẫu đầy đủ các trường hợp...'); // 0. TRUNCATE toàn bộ (giữ cấu trúc bảng)
+  console.log('🧹 Bắt đầu seed dữ liệu mẫu đầy đủ các trường hợp...');
 
   const tables = dataSource.entityMetadatas
     .map((e) => `"${e.tableName}"`)
     .join(', ');
-  await dataSource.query(`TRUNCATE TABLE ${tables} RESTART IDENTITY CASCADE;`); // ──────────────────────────────────────────────
-  // 1. COMPANY (chỉ 1 công ty để đơn giản)
-  // ──────────────────────────────────────────────
+  await dataSource.query(`TRUNCATE TABLE ${tables} RESTART IDENTITY CASCADE;`);
 
-  const company = await dataSource.getRepository(Company).save({
-    companyName: 'UpBase Global JSC',
+  const companyRepo = dataSource.getRepository(Company);
+
+  // 1. Công ty Staaar
+  const company1 = await companyRepo.save({
+    originId: 'LMONNKZO7X5',
+    companyName: 'Hoàng Hà Mobile',
     taxCode: '0109876543',
-    address: 'Tầng 5, Tòa nhà ABC, Quận 1, TP.HCM',
+    address: 'Địa chỉ của Hoàng Hà Mobile',
     status: 'ACTIVE',
   });
-  const companyId = company.id; // ──────────────────────────────────────────────
+  const companyId = company1.id;
+
+  // 2. Công ty HSH Việt Nam
+  const company2 = await companyRepo.save({
+    originId: 'LED1Z523PXK',
+    companyName: 'Công ty TNHH Xuất nhập khẩu HSH Việt Nam',
+    taxCode: '0109876544',
+    address: 'Địa chỉ HSH',
+    status: 'ACTIVE',
+  });
+  const companyId2 = company2.id;
+
+  // 3. Công ty Winning & Co
+  const company3 = await companyRepo.save({
+    originId: 'LEGNPX0DA0G',
+    companyName: 'Công ty Cổ phần Winning & Co',
+    taxCode: '0109876545',
+    address: 'Địa chỉ Winning',
+    status: 'ACTIVE',
+  });
+  const companyId3 = company3.id;
+
+  // 4. Công ty Intellife
+  const company4 = await companyRepo.save({
+    originId: 'LMLND1GRZO3',
+    companyName: 'Công ty cổ phần Intellife',
+    taxCode: '0109876546',
+    address: 'Địa chỉ Intellife',
+    status: 'ACTIVE',
+  });
+  const companyId4 = company4.id;
   // 2. MASTER DATA – Các bảng danh mục
   // ──────────────────────────────────────────────
   // JobLevel – các cấp bậc phổ biến
@@ -147,16 +176,7 @@ export const initDataSeed = async (dataSource: DataSource) => {
       leaveTypeName: 'Nghỉ thai sản',
       isDeductLeave: false,
     },
-  ]); // TimesheetAdjustmentType – các loại điều chỉnh công
-
-  await dataSource.getRepository(TimesheetAdjustmentType).save([
-    { companyId, adjustmentTypeName: 'Quên chấm công / quẹt thẻ' },
-    { companyId, adjustmentTypeName: 'Lỗi thiết bị / hệ thống' },
-    { companyId, adjustmentTypeName: 'Làm thêm giờ được phê duyệt' },
-    { companyId, adjustmentTypeName: 'Đi muộn / về sớm có phép' },
-  ]); // ──────────────────────────────────────────────
-  // 3. LEAVE POLICY + RULE (đại diện mọi loại nghỉ)
-  // ──────────────────────────────────────────────
+  ]);
 
   const leavePolicy = await dataSource.getRepository(LeavePolicy).save({
     companyId,
@@ -178,297 +198,776 @@ export const initDataSeed = async (dataSource: DataSource) => {
               ? 1
               : lt.code === 'FUNERAL_LEAVE'
                 ? 3
-                : null, // các loại còn lại không giới hạn hoặc BHXH chi trả
+                : null,
       isDeductLeave: lt.isDeductLeave,
     })),
-  ); // ──────────────────────────────────────────────
-  // 4. WORK LOCATION & DEPARTMENT (cấu trúc phân cấp)
-  // ──────────────────────────────────────────────
+  );
 
-  const workLocations = await dataSource.getRepository(WorkLocation).save([
+  const locationsData = [
     {
-      companyId,
-      locationName: 'Trụ sở chính TP.HCM',
-      address: 'Quận 1, TP.HCM',
-      isHeadOffice: true,
+      "originId": "LMONNKZO7X5",
+      "locationName": "Kho khoang mái",
+      "address": "104 Đ. Trần Duy Hưng, Trung Hoà, Cầu Giấy, Hà Nội",
+      "companyId": "1",
+      "isHead": true
     },
     {
-      companyId,
-      locationName: 'Chi nhánh Hà Nội',
-      address: 'Cầu Giấy, Hà Nội',
+      "originId": "1261010615",
+      "locationName": "Xưởng Đà Lạt - 114 Phùng Hưng",
+      "address": null,
+      "companyId": "1"
     },
     {
-      companyId,
-      locationName: 'Kho & Xưởng Bình Dương',
-      address: 'Thủ Dầu Một, Bình Dương',
+      "originId": "1221014002",
+      "locationName": "Nhóm Data và Planning",
+      "address": null,
+      "companyId": "1"
     },
     {
-      companyId,
-      locationName: 'Cửa hàng Quận 7',
-      address: 'Phú Mỹ Hưng, Quận 7',
+      "originId": "1221014003",
+      "locationName": "F Bà Triệu",
+      "address": null,
+      "companyId": "1"
     },
-  ]);
+    {
+      "originId": "1221014001",
+      "locationName": "F Trần Duy Hưng",
+      "address": null,
+      "companyId": "1"
+    },
+    {
+      "originId": "1231013073",
+      "locationName": "T Ngô Xuân Quảng",
+      "address": "Gia Lâm, Hà Nội",
+      "companyId": "1"
+    },
+    {
+      "originId": "1231013098",
+      "locationName": "T Ngọc Hồi",
+      "address": "Thanh Trì, Hà Nội",
+      "companyId": "1"
+    },
+    {
+      "originId": "1231013003",
+      "locationName": "T Ngọc Lâm",
+      "address": "Long Biên, Hà Nội",
+      "companyId": "1"
+    },
+    {
+      "originId": "1231013019",
+      "locationName": "T Nguyễn Hoàng",
+      "address": "Nam Từ Liêm, Hà Nội",
+      "companyId": "1"
+    },
+    {
+      "originId": "1231013063",
+      "locationName": "T Nguyễn Văn Lộc",
+      "address": "Hà Đông, Hà Nội",
+      "companyId": "1"
+    },
+    {
+      "originId": "1231013045",
+      "locationName": "T Trần Duy Hưng",
+      "address": "Quận 1, TP.HCM",
+      "companyId": "1"
+    },
+    {
+      "originId": "1491010000",
+      "locationName": "Phòng Kho vận",
+      "address": null,
+      "companyId": "1"
+    },
+    {
+      "originId": "1441000000",
+      "locationName": "Phòng Công nghệ thông tin",
+      "address": null,
+      "companyId": "1"
+    }
+  ]
 
-  const khoiTech = await dataSource.getRepository(Department).save({
-    companyId,
-    departmentName: 'Khối Công nghệ',
-    departmentCode: 'K_TECH',
-  });
-  const khoiSales = await dataSource.getRepository(Department).save({
-    companyId,
-    departmentName: 'Khối Kinh doanh',
-    departmentCode: 'K_SALES',
-  });
-  const khoiOps = await dataSource.getRepository(Department).save({
-    companyId,
-    departmentName: 'Khối Vận hành',
-    departmentCode: 'K_OPS',
-  });
+  const workLocationRepo = dataSource.getRepository(WorkLocation);
 
-  await dataSource.getRepository(Department).save([
-    {
-      companyId,
-      departmentName: 'Phòng Backend',
-      parentId: khoiTech.id,
-      departmentCode: 'P_BACKEND',
-    },
-    {
-      companyId,
-      departmentName: 'Phòng Frontend',
-      parentId: khoiTech.id,
-      departmentCode: 'P_FRONTEND',
-    },
-    {
-      companyId,
-      departmentName: 'Phòng Mobile',
-      parentId: khoiTech.id,
-      departmentCode: 'P_MOBILE',
-    },
-    {
-      companyId,
-      departmentName: 'Phòng Sales Miền Bắc',
-      parentId: khoiSales.id,
-      departmentCode: 'P_SALES_HN',
-    },
-    {
-      companyId,
-      departmentName: 'Phòng Sales Miền Nam',
-      parentId: khoiSales.id,
-      departmentCode: 'P_SALES_HCM',
-    },
-    {
-      companyId,
-      departmentName: 'Bộ phận Cửa hàng',
-      parentId: khoiOps.id,
-      departmentCode: 'P_STORE',
-    },
-    {
-      companyId,
-      departmentName: 'Bộ phận Xưởng',
-      parentId: khoiOps.id,
-      departmentCode: 'P_FACTORY',
-    },
-  ]); // ──────────────────────────────────────────────
-  // 5. SHIFT + REST RULE (đa dạng ca – văn phòng, thai sản, cửa hàng, xưởng)
-  // ──────────────────────────────────────────────
+  // Chuyển đổi dữ liệu thô sang định dạng Entity
+  const locationsToSave = locationsData.map((loc) => ({
+    companyId: companyId,
+    originId: loc.originId,
+    locationName: loc.locationName,
+    address: loc.address || 'Đang cập nhật',
+    isHeadOffice: loc.isHead || false,
+    status: 'ACTIVE',
+  }));
 
-  const shiftRepo = dataSource.getRepository(Shift);
-  const restRepo = dataSource.getRepository(ShiftRestRule);
+  const savedLocations = await workLocationRepo.save(locationsToSave);
+
+  console.log(`Đã lưu thành công ${savedLocations.length} địa điểm làm việc.`);
+
+  // const khoiTech = await dataSource.getRepository(Department).save({
+  //   companyId,
+  //   departmentName: 'Khối Công nghệ',
+  //   departmentCode: 'K_TECH',
+  // });
+  // const khoiSales = await dataSource.getRepository(Department).save({
+  //   companyId,
+  //   departmentName: 'Khối Kinh doanh',
+  //   departmentCode: 'K_SALES',
+  // });
+  // const khoiOps = await dataSource.getRepository(Department).save({
+  //   companyId,
+  //   departmentName: 'Khối Vận hành',
+  //   departmentCode: 'K_OPS',
+  // });
+
+  // await dataSource.getRepository(Department).save([
+  //   {
+  //     companyId,
+  //     departmentName: 'Phòng Backend',
+  //     parentId: khoiTech.id,
+  //     departmentCode: 'P_BACKEND',
+  //   },
+  //   {
+  //     companyId,
+  //     departmentName: 'Phòng Frontend',
+  //     parentId: khoiTech.id,
+  //     departmentCode: 'P_FRONTEND',
+  //   },
+  //   {
+  //     companyId,
+  //     departmentName: 'Phòng Mobile',
+  //     parentId: khoiTech.id,
+  //     departmentCode: 'P_MOBILE',
+  //   },
+  //   {
+  //     companyId,
+  //     departmentName: 'Phòng Sales Miền Bắc',
+  //     parentId: khoiSales.id,
+  //     departmentCode: 'P_SALES_HN',
+  //   },
+  //   {
+  //     companyId,
+  //     departmentName: 'Phòng Sales Miền Nam',
+  //     parentId: khoiSales.id,
+  //     departmentCode: 'P_SALES_HCM',
+  //   },
+  //   {
+  //     companyId,
+  //     departmentName: 'Bộ phận Cửa hàng',
+  //     parentId: khoiOps.id,
+  //     departmentCode: 'P_STORE',
+  //   },
+  //   {
+  //     companyId,
+  //     departmentName: 'Bộ phận Xưởng',
+  //     parentId: khoiOps.id,
+  //     departmentCode: 'P_FACTORY',
+  //   },
+  // ]);
+
+  // Giả sử companyId đã được định nghĩa trước đó
+  const departmentRepo = dataSource.getRepository(Department);
+
+  const departmentsToSave = [
+    { originId: '1261010615', departmentName: 'Nhóm Data và Planning', companyId },
+    { originId: 'fd592799e6d8612a', departmentName: 'Phòng Kinh doanh Format', companyId },
+    { originId: '1261010623', departmentName: 'Phòng Kinh doanh Market Place', companyId },
+    { originId: '1261010624', departmentName: 'Phòng kinh doanh O2O', companyId },
+    { originId: 'defbge38af6f1d6b', departmentName: 'Phòng Kinh Doanh TKL', companyId },
+    { originId: '1351010210', departmentName: 'Phòng Marketing F', companyId },
+    { originId: '1351020310', departmentName: 'Phòng Marketing T', companyId },
+    { originId: '1481020000', departmentName: 'Phòng Merchandise', companyId },
+    { originId: '1351030410', departmentName: 'Phòng Sáng tạo và Phát triển nội dung', companyId },
+    { originId: '1481090000', departmentName: 'Phòng Visual Merchandise', companyId },
+    { originId: '1481010000', departmentName: 'Phòng Cung ứng và Quản lý sản xuất', companyId },
+    { originId: '1491010000', departmentName: 'Phòng Kho vận', companyId },
+    { originId: '1111000000', departmentName: 'Phòng Nghiên cứu và Phát triển sản phẩm', companyId },
+    { originId: '1111020000', departmentName: 'Phòng Phát triển Mẫu', companyId },
+    { originId: '1511020000', departmentName: 'Ban Giám đốc', companyId },
+    { originId: '1211010000', departmentName: 'Nhóm Trợ lý Chủ tịch & Tổng giám đốc', companyId },
+    { originId: '1351030000', departmentName: 'Phòng Chăm sóc khách hàng', companyId },
+    { originId: '1441000000', departmentName: 'Phòng Công nghệ thông tin', companyId },
+    { originId: '1471020000', departmentName: 'Phòng Dự Án Xây Dựng', companyId },
+    { originId: '1451080000', departmentName: 'Phòng Nhân sự', companyId },
+    { originId: '1471010000', departmentName: 'Phòng phát triển mặt bằng', companyId },
+    { originId: '1451070000', departmentName: 'Phòng Quản trị nội bộ', companyId },
+    { originId: '1461000000', departmentName: 'Phòng Tài chính Kế toán', companyId },
+  ];
+
+  await departmentRepo.save(departmentsToSave);
 
   const shiftsData = [
-    // Văn phòng bình thường
     {
-      code: 'VP_08_17',
-      name: 'Văn phòng 8h-17h',
-      start: '08:00',
-      end: '17:00',
-      hours: 8,
-      restS: '12:00',
-      restE: '13:00',
+      originId: '7617681822219587098',
+      code: 'CA_HAN_CHINH_1',
+      shiftName: 'Ca hanh chinh 1',
+      startTime: '08:00',
+      endTime: '17:00',
+      shiftHours: 8,
+      allowLateMinutes: 1,
+      allowEarlyMinutes: 1,
+      restId: 1,
+      companyId,
     },
     {
-      code: 'VP_09_18',
-      name: 'Văn phòng 9h-18h',
-      start: '09:00',
-      end: '18:00',
-      hours: 8,
-      restS: '12:30',
-      restE: '13:30',
-    }, // Ca thai sản (giảm giờ, đa dạng khung nghỉ)
-    {
-      code: 'TS_08_16',
-      name: 'Thai sản 8h-16h',
-      start: '08:00',
-      end: '16:00',
-      hours: 7,
-      restS: '11:30',
-      restE: '13:00',
+      originId: '17617686815940365847',
+      code: 'CA_HAN_CHINH_2',
+      shiftName: 'Ca hanh chinh 2',
+      startTime: '08:30',
+      endTime: '17:30',
+      shiftHours: 8,
+      allowLateMinutes: 1,
+      allowEarlyMinutes: 1,
+      restId: 1,
+      companyId,
     },
     {
-      code: 'TS_08_30_16_30',
-      name: 'Thai sản 8:30-16:30',
-      start: '08:30',
-      end: '16:30',
-      hours: 7,
-      restS: '12:00',
-      restE: '13:30',
-    }, // Ca cửa hàng (ngắn, nhiều khung)
-    {
-      code: 'STORE_MORNING',
-      name: 'Ca sáng cửa hàng',
-      start: '08:00',
-      end: '12:00',
-      hours: 4,
-      restS: null,
-      restE: null,
+      originId: '17617682250839723546',
+      code: 'CA_THAI_SAN_1',
+      shiftName: 'Ca thai san 1',
+      startTime: '09:00',
+      endTime: '17:00',
+      shiftHours: 7,
+      allowLateMinutes: 1,
+      allowEarlyMinutes: 1,
+      restId: 1,
+      companyId,
     },
     {
-      code: 'STORE_AFTERNOON',
-      name: 'Ca chiều cửa hàng',
-      start: '13:00',
-      end: '18:00',
-      hours: 5,
-      restS: null,
-      restE: null,
+      originId: '17617682373005577752',
+      code: 'CA_THAI_SAN_2',
+      shiftName: 'Ca thai san 2',
+      startTime: '08:00',
+      endTime: '17:00',
+      shiftHours: 7,
+      allowLateMinutes: 1,
+      allowEarlyMinutes: 1,
+      restId: 2,
+      companyId,
     },
     {
-      code: 'STORE_EVENING',
-      name: 'Ca tối cửa hàng',
-      start: '17:00',
-      end: '22:00',
-      hours: 5,
-      restS: null,
-      restE: null,
-    }, // Ca xưởng
+      originId: '17617682487157722647',
+      code: 'CA_THAI_SAN_3',
+      shiftName: 'Ca thai san 3',
+      startTime: '08:00',
+      endTime: '17:00',
+      shiftHours: 7,
+      allowLateMinutes: 1,
+      allowEarlyMinutes: 1,
+      restId: 3,
+      companyId,
+    },
     {
-      code: 'FACTORY_08_17',
-      name: 'Xưởng 8h-17h',
-      start: '08:00',
-      end: '17:00',
-      hours: 8,
-      restS: '12:00',
-      restE: '13:00',
+      originId: '17617682625448168986',
+      code: 'CA_THAI_SAN_4',
+      shiftName: 'Ca thai san 4',
+      startTime: '08:00',
+      endTime: '16:00',
+      shiftHours: 7,
+      allowLateMinutes: 1,
+      allowEarlyMinutes: 1,
+      restId: 1,
+      companyId,
+    },
+    {
+      originId: '17617682773432405527',
+      code: 'CA_THAI_SAN_5',
+      shiftName: 'Ca thai san 5',
+      startTime: '08:30',
+      endTime: '17:00',
+      shiftHours: 7,
+      allowLateMinutes: 1,
+      allowEarlyMinutes: 1,
+      restId: 4,
+      companyId,
+    },
+    {
+      originId: '17617683974790942231',
+      code: 'CA_THAI_SAN_6',
+      shiftName: 'Ca thai san 6',
+      startTime: '08:30',
+      endTime: '17:00',
+      shiftHours: 7,
+      allowLateMinutes: 1,
+      allowEarlyMinutes: 1,
+      restId: 5,
+      companyId,
+    },
+    {
+      originId: '17617684273964781080',
+      code: 'CA_THAI_SAN_7',
+      shiftName: 'Ca thai san 7',
+      startTime: '08:30',
+      endTime: '16:30',
+      shiftHours: 7,
+      allowLateMinutes: 1,
+      allowEarlyMinutes: 1,
+      restId: 1,
+      companyId,
+    },
+    {
+      originId: '17617684657173171736',
+      code: 'CA_THAI_SAN_8',
+      shiftName: 'Ca thai san 8',
+      startTime: '08:00',
+      endTime: '17:00',
+      shiftHours: 7,
+      allowLateMinutes: 1,
+      allowEarlyMinutes: 1,
+      restId: 6,
+      companyId,
+    },
+    {
+      originId: '17617684839291555351',
+      code: 'CA_THAI_SAN_9',
+      shiftName: 'Ca thai san 9',
+      startTime: '08:00',
+      endTime: '16:30',
+      shiftHours: 7,
+      allowLateMinutes: 1,
+      allowEarlyMinutes: 1,
+      restId: 4,
+      companyId,
+    },
+    {
+      originId: '17617684959968415256',
+      code: 'CA_THAI_SAN_10',
+      shiftName: 'Ca thai san 10',
+      startTime: '08:00',
+      endTime: '16:30',
+      shiftHours: 7,
+      allowLateMinutes: 1,
+      allowEarlyMinutes: 1,
+      restId: 5,
+      companyId,
+    },
+    {
+      originId: 'Cacuahang1',
+      code: 'CA_CUA_HANG_1',
+      shiftName: 'Ca cua hang 1',
+      startTime: '08:00',
+      endTime: '09:00',
+      shiftHours: 1,
+      allowLateMinutes: 1,
+      allowEarlyMinutes: 1,
+      restId: null,
+      companyId,
+    },
+    {
+      originId: 'Cacuahang2',
+      code: 'CA_CUA_HANG_2',
+      shiftName: 'Ca cua hang 2',
+      startTime: '09:00',
+      endTime: '12:00',
+      shiftHours: 3,
+      allowLateMinutes: 1,
+      allowEarlyMinutes: 1,
+      restId: null,
+      companyId,
+    },
+    {
+      originId: 'Cacuahang3',
+      code: 'CA_CUA_HANG_3',
+      shiftName: 'Ca cua hang 3',
+      startTime: '12:00',
+      endTime: '15:00',
+      shiftHours: 3,
+      allowLateMinutes: 1,
+      allowEarlyMinutes: 1,
+      restId: null,
+      companyId,
+    },
+    {
+      originId: 'Cacuahang4',
+      code: 'CA_CUA_HANG_4',
+      shiftName: 'Ca cua hang 4',
+      startTime: '15:00',
+      endTime: '18:00',
+      shiftHours: 3,
+      allowLateMinutes: 1,
+      allowEarlyMinutes: 1,
+      restId: null,
+      companyId,
+    },
+    {
+      originId: 'Cacuahang5',
+      code: 'CA_CUA_HANG_5',
+      shiftName: 'Ca cua hang 5',
+      startTime: '18:00',
+      endTime: '21:00',
+      shiftHours: 3,
+      allowLateMinutes: 1,
+      allowEarlyMinutes: 1,
+      restId: null,
+      companyId,
+    },
+    {
+      originId: 'Cacuahang6',
+      code: 'CA_CUA_HANG_6',
+      shiftName: 'Ca cua hang 6',
+      startTime: '21:00',
+      endTime: '22:00',
+      shiftHours: 1,
+      allowLateMinutes: 1,
+      allowEarlyMinutes: 1,
+      restId: null,
+      companyId,
+    }
+  ];
+
+  const restRulesMapping = {
+    1: { start: '12:00', end: '13:00' },
+    2: { start: '11:00', end: '13:00' },
+    3: { start: '12:00', end: '14:00' },
+    4: { start: '11:30', end: '13:00' },
+    5: { start: '12:00', end: '13:30' },
+    6: { start: '11:30', end: '13:30' },
+  };
+
+  const groupsData = [
+    {
+      originId: '7617676707973074458',
+      code: 'GR_VAN_PHONG_1',
+      groupName: 'Ca Văn Phòng 1',
+      shiftCode: 'CA_HANH_CHINH_1', // Map từ 7617681822219587098
+      companyId,
+    },
+    {
+      originId: '7617681982959554072',
+      code: 'GR_VAN_PHONG_2',
+      groupName: 'Ca Văn Phòng 2',
+      shiftCode: 'CA_HANH_CHINH_2', // Map từ 17617686815940365847
+      companyId,
+    },
+    {
+      originId: '7617687309982371354',
+      code: 'GR_THAI_SAN_1',
+      groupName: 'Ca thai sản 1',
+      shiftCode: 'CA_THAI_SAN_1', // Map từ 17617682250839723546
+      companyId,
+    },
+    {
+      originId: '7617689477007330840',
+      code: 'GR_THAI_SAN_2',
+      groupName: 'Ca thai sản 2',
+      shiftCode: 'CA_THAI_SAN_2', // Map từ 17617682373005577752
+      companyId,
+    },
+    {
+      originId: '7617689963334307352',
+      code: 'GR_THAI_SAN_3',
+      groupName: 'Ca thai sản 3',
+      shiftCode: 'CA_THAI_SAN_3', // Map từ 17617682487157722647
+      companyId,
+    },
+    {
+      originId: '7617690605853871642',
+      code: 'GR_THAI_SAN_4',
+      groupName: 'Ca thai sản 4',
+      shiftCode: 'CA_THAI_SAN_4', // Map từ 17617682625448168986
+      companyId,
+    },
+    {
+      originId: '7617691029176651290',
+      code: 'GR_THAI_SAN_5',
+      groupName: 'Ca thai sản 5',
+      shiftCode: 'CA_THAI_SAN_5', // Map từ 17617682773432405527
+      companyId,
+    },
+    {
+      originId: '7617691935276322327',
+      code: 'GR_THAI_SAN_6',
+      groupName: 'Ca thai sản 6',
+      shiftCode: 'CA_THAI_SAN_6', // Map từ 17617683974790942231
+      companyId,
+    },
+    {
+      originId: '7617692580343500311',
+      code: 'GR_THAI_SAN_7',
+      groupName: 'Ca thai sản 7',
+      shiftCode: 'CA_THAI_SAN_7', // Map từ 17617684273964781080
+      companyId,
+    },
+    {
+      originId: '7617694472352042522',
+      code: 'GR_THAI_SAN_8',
+      groupName: 'Ca thai sản 8',
+      shiftCode: 'CA_THAI_SAN_8', // Map từ 17617684657173171736
+      companyId,
+    },
+    {
+      originId: '7617694808810753559',
+      code: 'GR_THAI_SAN_9',
+      groupName: 'Ca thai sản 9',
+      shiftCode: 'CA_THAI_SAN_9', // Map từ 17617684839291555351
+      companyId,
+    },
+    {
+      originId: '7617695144120159768',
+      code: 'GR_THAI_SAN_10',
+      groupName: 'Ca thai sản 10',
+      shiftCode: 'CA_THAI_SAN_10', // Map từ 17617684959968415256
+      companyId,
+    },
+    {
+      originId: '7617745162118123031',
+      code: 'GR_CUA_HANG',
+      groupName: 'Ca cửa hàng',
+      shiftCode: 'CA_CUA_HANG_1', // Map từ Cacuahang1
+      allShiftCodes: ['CA_HANH_CHINH_1', 'CA_HANH_CHINH_2'], // Map từ list số cũ
+      companyId,
     },
   ];
 
+  const shiftRepo = dataSource.getRepository(Shift);
+  const restRepo = dataSource.getRepository(ShiftRestRule);
+  const attendanceGroupRepo = dataSource.getRepository(AttendanceGroup);
+
+  // Khai báo mảng chứa kết quả ở ngoài để các vòng lặp sau có thể sử dụng
   const savedShifts: Shift[] = [];
-  for (const s of shiftsData) {
-    const shift = await shiftRepo.save({
-      companyId,
-      code: s.code,
-      shiftName: s.name,
-      startTime: new Date(`2026-01-01T${s.start}:00+07:00`),
-      endTime: new Date(`2026-01-01T${s.end}:00+07:00`),
-      shiftHours: s.hours,
-      allowLateMinutes: 15,
-      allowEarlyMinutes: 15,
+  const restIdToDbEntityMap = new Map<number, ShiftRestRule>();
+
+  // --- PHẦN 1: LƯU REST RULES ---
+  for (const [key, rule] of Object.entries(restRulesMapping)) {
+    const savedRule = await restRepo.save({
+      restBeginTime: `${rule.start}:00`,
+      restEndTime: `${rule.end}:00`,
     });
-    savedShifts.push(shift);
+    restIdToDbEntityMap.set(Number(key), savedRule);
+    console.log(`--- Đã lưu Rest Rule: ${rule.start} - ${rule.end} ---`);
+  }
 
-    if (s.restS && s.restE) {
-      await restRepo.save({
-        shiftId: shift.id,
-        restBeginTime: `${s.restS}:00`,
-        restEndTime: `${s.restE}:00`,
-      });
+  // --- PHẦN 2: LƯU SHIFTS ---
+  for (const s of shiftsData) {
+    const assignedRestRule = s.restId
+      ? restIdToDbEntityMap.get(s.restId)
+      : undefined;
+
+    // Dùng .create() để TypeScript không báo lỗi Overload
+    const newShift = shiftRepo.create({
+      companyId: companyId,
+      code: s.code,
+      originId: s.code,
+      shiftName: s.shiftName,
+      startTime: new Date(`2026-01-01T${s.startTime}:00+07:00`),
+      endTime: new Date(`2026-01-01T${s.endTime}:00+07:00`),
+      shiftHours: s.shiftHours,
+      allowLateMinutes: s.allowLateMinutes,
+      allowEarlyMinutes: s.allowEarlyMinutes,
+      restRule: assignedRestRule ?? undefined, // Chuyển null thành undefined
+    });
+
+    const saved = await shiftRepo.save(newShift);
+    savedShifts.push(saved); // Lưu vào mảng để tí nữa dùng cho Group
+    console.log(`--- Đã lưu Shift: ${s.shiftName} ---`);
+  }
+
+  // --- PHẦN 3: LƯU GROUPS ---
+  const savedGroups: AttendanceGroup[] = [];
+
+  for (const g of groupsData) {
+    // Bây giờ 'savedShifts' đã có dữ liệu để tìm kiếm
+    const defaultShift = savedShifts.find((s) => s.code === g.shiftCode);
+    let relatedShifts: Shift[] = [];
+
+    if (g.shiftCode === 'Cacuahang1') {
+      relatedShifts = savedShifts.filter((s) => s.code.startsWith('Cacuahang'));
+    } else {
+      // Các nhóm khác chỉ lấy chính ca mặc định của nó
+      relatedShifts = defaultShift ? [defaultShift] : [];
     }
-  } // ──────────────────────────────────────────────
-  // 6. ATTENDANCE GROUP
-  // ──────────────────────────────────────────────
+    const groupEntity = attendanceGroupRepo.create({
+      companyId: companyId,
+      originId: g.code,
+      code: g.code,
+      groupName: g.groupName,
+      // Gán ID nếu tìm thấy, không thì undefined
+      defaultShiftId: defaultShift?.id ?? undefined,
+      shifts: relatedShifts,
+      status: 'ACTIVE',
+    });
 
-  const groups = await dataSource.getRepository(AttendanceGroup).save([
-    {
-      companyId,
-      code: 'OFFICE',
-      groupName: 'Nhân viên văn phòng',
-      defaultShiftId: savedShifts.find((s) => s.code === 'VP_08_17')?.id,
-      status: 'ACTIVE',
-    },
-    {
-      companyId,
-      code: 'MATERNITY',
-      groupName: 'Nhân viên nghỉ thai sản',
-      defaultShiftId: savedShifts.find((s) => s.code === 'TS_08_16')?.id,
-      status: 'ACTIVE',
-    },
-    {
-      companyId,
-      code: 'STORE',
-      groupName: 'Nhân viên cửa hàng',
-      defaultShiftId: savedShifts.find((s) => s.code === 'STORE_MORNING')?.id,
-      status: 'ACTIVE',
-    },
-    {
-      companyId,
-      code: 'FACTORY',
-      groupName: 'Nhân viên xưởng',
-      defaultShiftId: savedShifts.find((s) => s.code === 'FACTORY_08_17')?.id,
-      status: 'ACTIVE',
-    },
-  ]); // ──────────────────────────────────────────────
+    const group = await attendanceGroupRepo.save(groupEntity);
+    savedGroups.push(group);
+  }
+
+  console.log(`--- Đã import xong ${savedGroups.length} nhóm chấm công ---`);
+
+  const holidayRepo = dataSource.getRepository(Holiday);
+
+  const parseVNCardDate = (dateStr: string) => {
+    const [day, month, year] = dateStr.split('/').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  const holidaysData = [
+    { name: 'Tết Dương lịch', date: '01/01/2026', type: 'PUBLIC', value: 1.0 },
+    { name: 'Tết Nguyên đán', date: '17/02/2026', type: 'PUBLIC', value: 1.0 },
+    { name: 'NKT VN', date: '18/04/2026', type: 'ANGEL', value: 1.0 }, // Map "Nghỉ lễ Angel" -> ANGEL
+    { name: 'Du lịch', date: '20/03/2026', type: 'SPECIAL', value: 1.0 }, // Map "Nghỉ đặc biệt" -> SPECIAL
+  ];
+
+  for (const h of holidaysData) {
+    await holidayRepo.save({
+      companyId: companyId,
+      holiday_name: h.name,
+      holiday_date: parseVNCardDate(h.date),
+      holiday_type: h.type as any,
+      workday_value: h.value,
+      is_active: true,
+    });
+  }
+
+  console.log(
+    `--- Đã import thành công ${holidaysData.length} ngày lễ cho công ty ---`,
+  );
+  // ──────────────────────────────────────────────
   // 7. EMPLOYEE – đa dạng mọi trường hợp
   // ──────────────────────────────────────────────
 
   const employeeRepo = dataSource.getRepository(Employee);
-  const employees: Partial<Employee>[] = [];
 
-  const departments = await dataSource
-    .getRepository(Department)
-    .find({ where: { companyId } });
+  // Lấy các dữ liệu tham chiếu
+  const empGroup = savedGroups.find((g) => g.code === 'GR_VAN_PHONG_1');
 
-  for (let i = 1; i <= 40; i++) {
-    const isFemale = faker.datatype.boolean();
-    const isResigned = i <= 4; // 4 người đã nghỉ
-    const isMaternity = isFemale && i % 7 === 0;
-    const isProbation = i % 5 === 0;
-    const isPartTime = i % 9 === 0;
-    const is_saturday_off = i % 2 === 0;
-    const is_angel = i % 2 === 0;
+  // workLocations không có field isHeadOffice, ta tìm theo tên
+  const workLocationOffice = savedLocations.find((l) => l.locationName && !l.locationName.includes('Cửa hàng')) || savedLocations[0];
+  const workLocationStore = savedLocations.find((l) => l.locationName && l.locationName.includes('Cửa hàng')) || savedLocations[0];
 
+  const departments = await dataSource.getRepository(Department).find({ where: { companyId } });
+  const deptOffice = departments.find(d => d.departmentCode === 'P_BACKEND') || departments[0];
+  const deptStore = departments.find(d => d.departmentCode === 'P_STORE') || departments[0];
+
+  const testCases = [
+    {
+      id: '1001',
+      userName: 'vp_chuan',
+      fullName: 'NV VP Đi Chuẩn',
+      groupCode: 'GR_VAN_PHONG_1', // Ca VP 1
+      isMaternity: false,
+      isStore: false,
+    },
+    {
+      id: '1002',
+      userName: 'vp_dimuon',
+      fullName: 'NV VP Đi Muộn',
+      groupCode: 'GR_VAN_PHONG_1',
+      isMaternity: false,
+      isStore: false,
+    },
+    {
+      id: '1003',
+      userName: 'vp_vesom',
+      fullName: 'NV VP Về Sớm',
+      groupCode: 'GR_VAN_PHONG_1',
+      isMaternity: false,
+      isStore: false,
+    },
+    {
+      id: '1004',
+      userName: 'vp_quen_cham',
+      fullName: 'NV VP Quên Chấm Công',
+      groupCode: 'GR_VAN_PHONG_1',
+      isMaternity: false,
+      isStore: false,
+    },
+    {
+      id: '1005',
+      userName: 'ts_muon_1h',
+      fullName: 'NV Thai Sản Đi Muộn 1h',
+      groupCode: 'GR_THAI_SAN_1', // Ca thai sản 1
+      isMaternity: true,
+      isStore: false,
+    },
+    {
+      id: '1006',
+      userName: 'ts_ve_som_1h',
+      fullName: 'NV Thai Sản Về Sớm 1h',
+      groupCode: 'GR_THAI_SAN_2', // Ca thai sản 2
+      isMaternity: true,
+      isStore: false,
+    },
+    {
+      id: '1007',
+      userName: 'ch_ca_sang',
+      fullName: 'NV Cửa Hàng Ca Sáng',
+      groupCode: 'GR_CUA_HANG', // Ca cửa hàng
+      isMaternity: false,
+      isStore: true,
+    },
+    {
+      id: '1008',
+      userName: 'ch_ca_chieu',
+      fullName: 'NV Cửa Hàng Ca Chiều',
+      groupCode: 'GR_CUA_HANG', // Ca cửa hàng
+      isMaternity: false,
+      isStore: true,
+    },
+    {
+      id: '1009',
+      userName: 'ch_xoay_ca',
+      fullName: 'NV Cửa Hàng Xoay Ca',
+      groupCode: 'GR_CUA_HANG', // Ca cửa hàng
+      isMaternity: false,
+      isStore: true,
+    },
+    {
+      id: '1010',
+      userName: 'vp_parttime',
+      fullName: 'NV VP Part-time',
+      groupCode: 'GR_VAN_PHONG_1', // Ca VP 1
+      isPartTime: true,
+      isMaternity: false,
+      isStore: false,
+    },
+    {
+      id: '1011',
+      userName: 'vp_t7_off',
+      fullName: 'NV VP Nghỉ Thứ 7',
+      groupCode: 'GR_VAN_PHONG_1', // Ca VP 1
+      isSaturdayOff: true,
+      isMaternity: false,
+      isStore: false,
+    },
+  ];
+
+  const employees: Employee[] = [];
+
+  for (const tc of testCases) {
+    const isFemale = tc.isMaternity ? true : faker.datatype.boolean();
     const joinedAt = faker.date.past({ years: 4 });
-    const resignedAt = isResigned
-      ? faker.date.between({ from: joinedAt, to: new Date() })
-      : null;
+    const selectedGroup = savedGroups.find((g) => g.code === tc.groupCode) || empGroup;
 
-    employees.push({
+    let empType = empTypes.find((t) => t.code === 'OFFICIAL')!;
+    if (tc.isPartTime) empType = empTypes.find((t) => t.code === 'PART_TIME')!;
+    if (tc.isStore) empType = empTypes.find((t) => t.code === 'SHIFT_WORKER')!;
+
+    employees.push(employeeRepo.create({
       companyId,
-      userId: `${1000 + i}`,
-      userName: `user${i}`,
-      fullName: faker.person.fullName({ sex: isFemale ? 'female' : 'male' }),
-      email: `user${i}@upbase.global`,
+      userId: tc.id,
+      originId: `604465_${tc.id}`,
+      userName: tc.userName,
+      fullName: tc.fullName,
+      email: `${tc.userName}@upbase.global`,
       phoneNumber: faker.phone.number(),
       gender: isFemale ? 'FEMALE' : 'MALE',
       birthday: faker.date.birthdate({ min: 22, max: 48, mode: 'age' }),
       joinedAt,
-      resignedAt,
-      workLocation: randomFromArray(workLocations),
-      departments: faker.helpers.arrayElements(departments, { min: 1, max: 2 }),
-      attendanceGroup: randomFromArray(groups),
+      resignedAt: null,
+      workLocation: tc.isStore ? workLocationStore : workLocationOffice,
+      departments: [tc.isStore ? deptStore : deptOffice],
+      attendanceGroup: selectedGroup,
       jobLevel: randomFromArray(jobLevels),
-      employeeType: isProbation
-        ? empTypes.find((t) => t.code === 'PROBATION')!
-        : isPartTime
-          ? empTypes.find((t) => t.code === 'PART_TIME')!
-          : randomFromArray(empTypes),
-      employeeStatus: resignedAt
-        ? empStatuses.find((s) => s.code === 'RESIGNED')!
-        : isMaternity
-          ? empStatuses.find((s) => s.code === 'MATERNITY_LEAVE')!
-          : randomFromArray(
-              empStatuses.filter(
-                (s) => !['RESIGNED', 'TERMINATED'].includes(s.code!),
-              ),
-            ),
-      attendanceMethod: randomFromArray(attMethods),
-      is_saturday_off: is_saturday_off,
-      is_angel: is_angel,
+      employeeType: empType,
+      employeeStatus: empStatuses.find((s) => s.code === 'WORKING') || empStatuses[0],
+      attendanceMethod: attMethods.find(m => m.code === 'TIME_MACHINE') || attMethods[0],
+      is_saturday_off: !!tc.isSaturdayOff,
+      is_angel: false,
+      is_maternity_shift: !!tc.isMaternity,
       leavePolicy: leavePolicy,
-      standardWorkdays: 22,
-      larkId: `lark_${10000 + i}`,
-    });
+      larkId: `lark_${tc.id}`,
+    }));
   }
 
-  await employeeRepo.save(employees);
+  const savedEmployees = await employeeRepo.save(employees);
+  console.log(`--- Đã seed thành công ${savedEmployees.length} nhân viên test cases ---`);
 
   console.log('✅ Hoàn thành seed dữ liệu – đầy đủ các trường hợp nghiệp vụ');
 };

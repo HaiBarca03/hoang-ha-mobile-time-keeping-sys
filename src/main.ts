@@ -15,6 +15,11 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn', 'debug', 'verbose'],
   });
 
+  // Tăng giới hạn payload JSON (Ví dụ 50MB)
+  const { json, urlencoded } = require('express');
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ extended: true, limit: '50mb' }));
+
   useContainer(app.select(AppModule), {
     fallbackOnErrors: true,
   });

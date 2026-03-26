@@ -12,11 +12,19 @@ export class LeavePolicyRule extends BaseEntity {
   @Column({ name: 'leave_type_id', type: 'bigint' })
   leaveTypeId: string;
 
-  @Column({ name: 'quota_days', type: 'decimal', precision: 6, scale: 2, nullable: true })
+  @Column({
+    name: 'quota_days',
+    type: 'decimal',
+    precision: 6,
+    scale: 2,
+    nullable: true,
+  })
   quotaDays: number | null;
 
   @Column({ name: 'is_deduct_leave', type: 'boolean', default: true })
   isDeductLeave: boolean;
+
+  // --- Relationships ---
 
   @ManyToOne(() => LeavePolicy, (policy) => policy.rules)
   @JoinColumn({ name: 'policy_id' })

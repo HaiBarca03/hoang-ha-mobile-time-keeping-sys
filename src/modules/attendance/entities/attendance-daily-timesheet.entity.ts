@@ -9,12 +9,10 @@ import {
 import { BaseEntity } from '../../../database/entities/base.entity';
 import { Employee } from '../../master-data/entities/employee.entity';
 import { AttendanceDailyPunch } from './attendance-daily-punch.entity';
-import { AttendancePunchRecord } from './attendance-punch-record.entity';
 import { Company } from '../../master-data/entities/company.entity';
 import { AttendanceRequest } from '../../approval-management/entities/attendance-request.entity';
 
 @Entity('attendance_daily_timesheets')
-@Index(['company_id', 'month', 'year'])
 @Index(['employee_id', 'attendance_date'], { unique: true })
 export class AttendanceDailyTimesheet extends BaseEntity {
   @Column({ type: 'bigint' })
@@ -35,8 +33,11 @@ export class AttendanceDailyTimesheet extends BaseEntity {
   @Column()
   year: number;
 
-  @Column({ type: 'varchar', nullable: true })
-  shift_id?: string;
+  @Column({
+    type: 'varchar',
+    nullable: true,
+  })
+  shift_id?: string | null;
 
   @Column({ type: 'timestamp', nullable: true })
   check_in_raw: Date | null;
@@ -51,10 +52,10 @@ export class AttendanceDailyTimesheet extends BaseEntity {
   check_out_actual: Date | null;
 
   @Column({ type: 'varchar', nullable: true })
-  check_in_result?: string;
+  check_in_result?: string | null;
 
   @Column({ type: 'varchar', nullable: true })
-  check_out_result?: string;
+  check_out_result?: string | null;
 
   @Column({ default: 0 })
   late_minutes: number;
@@ -119,14 +120,11 @@ export class AttendanceDailyTimesheet extends BaseEntity {
   @Column({ default: 'Lack' })
   attendance_status: string;
 
-  @Column({ type: 'decimal', precision: 4, scale: 2, default: 0 })
-  actual_workday: number;
-
   @Column({ type: 'varchar', nullable: true })
-  calculation_version?: string;
+  calculation_version?: string | null;
 
   @Column({ type: 'timestamp', nullable: true })
-  calculated_at: Date;
+  calculated_at?: Date | null;
 
   @Column({ default: false })
   is_recalculated: boolean;
@@ -134,7 +132,9 @@ export class AttendanceDailyTimesheet extends BaseEntity {
   @Column({ default: false })
   is_configured_off_day: boolean;
 
-  // --- Relationships ---
+  @Column({ default: false })
+  is_saturday_candidate: boolean;
+
   @ManyToOne(() => Company, (company) => company.attendanceTimesheets)
   @JoinColumn({ name: 'company_id' })
   company: Company;

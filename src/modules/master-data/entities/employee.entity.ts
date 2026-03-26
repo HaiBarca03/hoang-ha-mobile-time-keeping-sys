@@ -34,6 +34,10 @@ export class Employee extends BaseEntity {
   @Column({ name: 'work_location_id', type: 'bigint' })
   workLocationId: string;
 
+  @Index({ unique: true })
+  @Column({ name: 'origin_id', type: 'varchar', unique: true, nullable: true })
+  originId: string;
+
   @Column({ name: 'user_id', type: 'varchar' })
   userId: string;
 
@@ -55,9 +59,6 @@ export class Employee extends BaseEntity {
   @Column({ name: 'manager_id', type: 'bigint', nullable: true })
   managerId: string;
 
-  @Column({ name: 'standard_workdays', type: 'decimal', precision: 6, scale: 2, nullable: true })
-  standardWorkdays: number;
-
   @Column({ name: 'birthday', type: 'date', nullable: true })
   birthday: Date;
 
@@ -65,10 +66,10 @@ export class Employee extends BaseEntity {
   gender: string;
 
   @Column({ name: 'joined_at', type: 'date', nullable: true })
-  joinedAt: Date;
+  joinedAt: Date; // Ngày vào công ty
 
   @Column({ name: 'resigned_at', type: 'date', nullable: true })
-  resignedAt: Date | null;
+  resignedAt: Date | null; // Ngày nghỉ việc
 
   @Column({ default: false })
   is_saturday_off: boolean;
@@ -76,7 +77,11 @@ export class Employee extends BaseEntity {
   @Column({ default: false })
   is_angel: boolean;
 
-  /* Relations */
+  @Column({ default: false })
+  is_maternity_shift: boolean;
+
+  // --- Relations ---
+
   @ManyToOne(() => Employee, (e) => e.subordinates)
   @JoinColumn({ name: 'manager_id' })
   manager: Employee;

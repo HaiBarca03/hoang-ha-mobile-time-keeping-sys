@@ -14,6 +14,8 @@ export class AttendanceMethod extends BaseEntity {
   @Column({ name: 'method_name', type: 'varchar' })
   methodName: string;
 
+  // --- Relationships ---
+
   @ManyToOne(() => Company)
   @JoinColumn({ name: 'company_id' })
   company: Company;

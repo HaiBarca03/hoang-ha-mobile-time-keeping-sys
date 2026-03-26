@@ -12,6 +12,9 @@ export class AttendanceMonthlyTimesheet extends BaseEntity {
   @Column({ type: 'bigint' })
   employee_id: string;
 
+  @Column({ type: 'varchar' })
+  user_id: string;
+
   @Column()
   month: number;
 
@@ -52,9 +55,8 @@ export class AttendanceMonthlyTimesheet extends BaseEntity {
   confirmation_status: string;
 
   @Column({ type: 'timestamp', nullable: true })
-  last_sync_at: Date;
+  last_sync_at?: Date | null;
 
-  // Relations
   @ManyToOne(() => Employee)
   @JoinColumn({ name: 'employee_id' })
   employee: Employee;
