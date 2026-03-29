@@ -8,10 +8,10 @@ export class RequestDetailOvertime extends BaseEntity {
   @Column()
   attendance_request_id: string;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'datetime2' })
   start_time: Date;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'datetime2' })
   end_time: Date;
 
   @Column({ nullable: true })

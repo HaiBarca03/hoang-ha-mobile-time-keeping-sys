@@ -28,10 +28,10 @@ export class Shift extends BaseEntity {
   @Column({ name: 'shift_name', type: 'varchar' })
   shiftName: string;
 
-  @Column({ name: 'start_time', type: 'timestamptz' })
+  @Column({ name: 'start_time', type: 'datetime2' })
   startTime: Date;
 
-  @Column({ name: 'end_time', type: 'timestamptz' })
+  @Column({ name: 'end_time', type: 'datetime2' })
   endTime: Date;
 
   @Column({ name: 'allow_late_minutes', type: 'int', default: 0 })

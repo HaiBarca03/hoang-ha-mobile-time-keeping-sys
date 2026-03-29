@@ -7,7 +7,6 @@ import { Company } from './entities/company.entity';
 import { Employee } from './entities/employee.entity';
 import { ShiftRestRule } from './entities/shift-rest-rule.entity';
 import { Shift } from './entities/shift.entity';
-// import { ShiftRule } from "./entities/shift-rule.entity";
 import { EmployeeType } from './entities/employee-type.entity';
 import { MasterDataService } from './master-data.service';
 import { EmployeeStatus } from './entities/employee-status.entity';
@@ -41,4 +40,4 @@ import { AttendanceMethod } from './entities/attendance-method.entity';
   providers: [MasterDataService],
   exports: [MasterDataService],
 })
-export class MasterDataModule {}
+export class MasterDataModule { }

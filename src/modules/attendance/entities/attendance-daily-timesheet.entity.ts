@@ -39,16 +39,16 @@ export class AttendanceDailyTimesheet extends BaseEntity {
   })
   shift_id?: string | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime2', nullable: true })
   check_in_raw: Date | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime2', nullable: true })
   check_out_raw: Date | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime2', nullable: true })
   check_in_actual: Date | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime2', nullable: true })
   check_out_actual: Date | null;
 
   @Column({ type: 'varchar', nullable: true })
@@ -123,7 +123,7 @@ export class AttendanceDailyTimesheet extends BaseEntity {
   @Column({ type: 'varchar', nullable: true })
   calculation_version?: string | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime2', nullable: true })
   calculated_at?: Date | null;
 
   @Column({ default: false })

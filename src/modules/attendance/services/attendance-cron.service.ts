@@ -88,28 +88,55 @@ export class AttendanceCronService {
   }
 
   private async claimPunches(jobId: string, limit: number): Promise<AttendancePunchRecord[]> {
-    // Logic: Bốc PENDING, FAILED, hoặc PROCESSING bị treo quá 15p
-    const query = `
-      UPDATE attendance_punch_records
-      SET 
-        processing_status = 'PROCESSING',
-        job_id = $1,
-        updated_at = NOW()
-      WHERE id IN (
-        SELECT id FROM attendance_punch_records
-        WHERE 
-          (processing_status = 'PENDING' 
-           OR (processing_status = 'FAILED' AND retry_count < 5)
-           OR (processing_status = 'PROCESSING' AND updated_at < NOW() - INTERVAL '15 minutes'))
-        ORDER BY processing_status DESC, id ASC
-        LIMIT $2
-        FOR UPDATE SKIP LOCKED
-      )
-      RETURNING *;
-    `;
-    const result = await this.dataSource.query(query, [jobId, limit]);
-    // Postgres trả về [data_array, count], ta lấy cái đầu tiên
-    return Array.isArray(result) ? result[0] : [];
+    const isMssql = this.dataSource.options.type === 'mssql';
+    let query: string;
+    let params: any[];
+
+    if (isMssql) {
+      // SQL Server version
+      query = `
+        WITH CTE AS (
+          SELECT TOP (@1) *
+          FROM attendance_punch_records WITH (UPDLOCK, READPAST)
+          WHERE 
+            (processing_status = 'PENDING' 
+             OR (processing_status = 'FAILED' AND retry_count < 5)
+             OR (processing_status = 'PROCESSING' AND updated_at < DATEADD(minute, -15, GETDATE())))
+          ORDER BY processing_status DESC, id ASC
+        )
+        UPDATE CTE
+        SET 
+          processing_status = 'PROCESSING',
+          job_id = @0,
+          updated_at = GETDATE()
+        OUTPUT INSERTED.*;
+      `;
+      params = [jobId, limit];
+    } else {
+      // Postgres version
+      query = `
+        UPDATE attendance_punch_records
+        SET 
+          processing_status = 'PROCESSING',
+          job_id = $1,
+          updated_at = NOW()
+        WHERE id IN (
+          SELECT id FROM attendance_punch_records
+          WHERE 
+            (processing_status = 'PENDING' 
+             OR (processing_status = 'FAILED' AND retry_count < 5)
+             OR (processing_status = 'PROCESSING' AND updated_at < NOW() - INTERVAL '15 minutes'))
+          ORDER BY processing_status DESC, id ASC
+          LIMIT $2
+          FOR UPDATE SKIP LOCKED
+        )
+        RETURNING *;
+      `;
+      params = [jobId, limit];
+    }
+
+    const result = await this.dataSource.query(query, params);
+    return Array.isArray(result) ? (isMssql ? result : result[0]) : [];
   }
 
   private groupPunchesByEmployeeAndDate(records: any[], jobId: string) {

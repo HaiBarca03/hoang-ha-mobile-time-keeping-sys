@@ -28,23 +28,25 @@ export class AttendanceRecordService {
     const result = isCheckIn ? record.check_in_result : record.check_out_result;
     const targetShiftTime = isCheckIn ? record.check_in_shift_time : record.check_out_shift_time;
 
+    const defaultPunchTime = `${String(day).substring(0, 4)}-${String(day).substring(4, 6)}-${String(day).substring(6, 8)}T00:00:00.000Z`;
+
     return {
       company_id: companyId,
       external_user_id: userTask.user_id,
-      punch_time: new Date(parseInt(larkRecord.check_time) * 1000).toISOString(),
+      punch_time: larkRecord?.check_time ? new Date(parseInt(larkRecord.check_time) * 1000).toISOString() : defaultPunchTime,
       lark_record_id: larkRecord?.record_id || `VIRTUAL_${type}_${userTask.result_id}`,
       punch_type: type,
       day: day,
       punch_result: result,
-      source_type: larkRecord.is_wifi ? 'WIFI' : 'GPS',
-      latitude: larkRecord.latitude,
-      longitude: larkRecord.longitude,
-      address: larkRecord.location_name,
-      device_id: larkRecord.device_id,
-      ssid: larkRecord.ssid,
-      photo_url: larkRecord.photo_urls?.[0] || null,
+      source_type: larkRecord ? (larkRecord.is_wifi ? 'WIFI' : 'GPS') : undefined,
+      latitude: larkRecord?.latitude,
+      longitude: larkRecord?.longitude,
+      address: larkRecord?.location_name,
+      device_id: larkRecord?.device_id,
+      ssid: larkRecord?.ssid,
+      photo_url: larkRecord?.photo_urls?.[0] || undefined,
       shift_time_target: targetShiftTime ? new Date(parseInt(targetShiftTime) * 1000).toISOString() : undefined,
-      raw_payload: larkRecord,
+      raw_payload: record, // Lưu toàn bộ record phòng khi larkRecord rỗng
     };
   }
 }

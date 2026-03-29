@@ -5,49 +5,43 @@ import 'dotenv/config';
 @Injectable()
 export class TypeOrmConfigService implements TypeOrmOptionsFactory {
   createTypeOrmOptions(): TypeOrmModuleOptions {
-    const useSsl = process.env.DATABASE_SSL_ENABLED === 'true';
+    const isSsl = process.env.DATABASE_SSL_ENABLED === 'true';
+    const trustServerCertificate =
+      process.env.DATABASE_TRUST_SERVER_CERTIFICATE === 'true';
     const hasUrl = !!process.env.DATABASE_URL?.trim();
 
-    return {
-      type: 'postgres',
-
-      ...(hasUrl
-        ? {
-            url: process.env.DATABASE_URL,
-          }
-        : {
-            type: (process.env.DATABASE_TYPE as any) || 'postgres',
-            host: process.env.DATABASE_HOST,
-            port: process.env.DATABASE_PORT
-              ? parseInt(process.env.DATABASE_PORT, 10)
-              : 5432,
-            username: process.env.DATABASE_USERNAME,
-            password: process.env.DATABASE_PASSWORD,
-            database: process.env.DATABASE_NAME,
-          }),
-
+    const baseOptions: TypeOrmModuleOptions = {
+      type: 'mssql',
       synchronize: process.env.DATABASE_SYNCHRONIZE === 'true',
       dropSchema: false,
       logging: process.env.NODE_ENV !== 'production',
-
       entities: [__dirname + '/../**/*.entity{.ts,.js}'],
       migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
-
-      ssl: useSsl
-        ? {
-            rejectUnauthorized:
-              process.env.DATABASE_REJECT_UNAUTHORIZED === 'true',
-            ca: process.env.DATABASE_CA || undefined,
-            key: process.env.DATABASE_KEY || undefined,
-            cert: process.env.DATABASE_CERT || undefined,
-          }
-        : false,
-
+      options: {
+        encrypt: isSsl,
+        trustServerCertificate,
+      },
       extra: {
         max: process.env.DATABASE_MAX_CONNECTIONS
           ? parseInt(process.env.DATABASE_MAX_CONNECTIONS, 10)
           : 20,
       },
     };
+
+    return hasUrl
+      ? {
+        ...baseOptions,
+        url: process.env.DATABASE_URL,
+      }
+      : {
+        ...baseOptions,
+        host: process.env.DATABASE_HOST,
+        port: process.env.DATABASE_PORT
+          ? parseInt(process.env.DATABASE_PORT, 10)
+          : 1433,
+        username: process.env.DATABASE_USERNAME,
+        password: process.env.DATABASE_PASSWORD,
+        database: process.env.DATABASE_NAME,
+      };
   }
 }

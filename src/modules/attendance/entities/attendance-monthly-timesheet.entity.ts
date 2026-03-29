@@ -54,7 +54,7 @@ export class AttendanceMonthlyTimesheet extends BaseEntity {
   @Column({ default: 'pending' })
   confirmation_status: string;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime2', nullable: true })
   last_sync_at?: Date | null;
 
   @ManyToOne(() => Employee)

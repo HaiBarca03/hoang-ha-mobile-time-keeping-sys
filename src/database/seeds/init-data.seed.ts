@@ -22,10 +22,28 @@ import { Holiday } from 'src/modules/attendance/entities/holidays.entity';
 export const initDataSeed = async (dataSource: DataSource) => {
   console.log('🧹 Bắt đầu seed dữ liệu mẫu đầy đủ các trường hợp...');
 
-  const tables = dataSource.entityMetadatas
-    .map((e) => `"${e.tableName}"`)
-    .join(', ');
-  await dataSource.query(`TRUNCATE TABLE ${tables} RESTART IDENTITY CASCADE;`);
+  const isMssql = dataSource.options.type === 'mssql';
+
+  if (isMssql) {
+    // SQL Server equivalent: Disable constraints, delete data, and re-enable constraints
+    await dataSource.query('EXEC sp_MSforeachtable "ALTER TABLE ? NOCHECK CONSTRAINT ALL"');
+    for (const entity of dataSource.entityMetadatas) {
+      await dataSource.query(`DELETE FROM "${entity.tableName}"`);
+      // Optional: Reseed identity if it exists
+      try {
+        await dataSource.query(`DBCC CHECKIDENT ("${entity.tableName}", RESEED, 0)`);
+      } catch (e) {
+        // Table might not have an identity column or other issues, ignore
+      }
+    }
+    await dataSource.query('EXEC sp_MSforeachtable "ALTER TABLE ? CHECK CONSTRAINT ALL"');
+  } else {
+    // Original PostgreSQL logic
+    const tables = dataSource.entityMetadatas
+      .map((e) => `"${e.tableName}"`)
+      .join(', ');
+    await dataSource.query(`TRUNCATE TABLE ${tables} RESTART IDENTITY CASCADE;`);
+  }
 
   const companyRepo = dataSource.getRepository(Company);
 
@@ -626,14 +644,14 @@ export const initDataSeed = async (dataSource: DataSource) => {
       originId: '7617676707973074458',
       code: 'GR_VAN_PHONG_1',
       groupName: 'Ca Văn Phòng 1',
-      shiftCode: 'CA_HANH_CHINH_1', // Map từ 7617681822219587098
+      shiftCode: 'CA_HAN_CHINH_1', // Map từ 7617681822219587098
       companyId,
     },
     {
       originId: '7617681982959554072',
       code: 'GR_VAN_PHONG_2',
       groupName: 'Ca Văn Phòng 2',
-      shiftCode: 'CA_HANH_CHINH_2', // Map từ 17617686815940365847
+      shiftCode: 'CA_HAN_CHINH_2', // Map từ 17617686815940365847
       companyId,
     },
     {
@@ -928,46 +946,46 @@ export const initDataSeed = async (dataSource: DataSource) => {
     },
   ];
 
-  const employees: Employee[] = [];
+  // const employees: Employee[] = [];
 
-  for (const tc of testCases) {
-    const isFemale = tc.isMaternity ? true : faker.datatype.boolean();
-    const joinedAt = faker.date.past({ years: 4 });
-    const selectedGroup = savedGroups.find((g) => g.code === tc.groupCode) || empGroup;
+  // for (const tc of testCases) {
+  //   const isFemale = tc.isMaternity ? true : faker.datatype.boolean();
+  //   const joinedAt = faker.date.past({ years: 4 });
+  //   const selectedGroup = savedGroups.find((g) => g.code === tc.groupCode) || empGroup;
 
-    let empType = empTypes.find((t) => t.code === 'OFFICIAL')!;
-    if (tc.isPartTime) empType = empTypes.find((t) => t.code === 'PART_TIME')!;
-    if (tc.isStore) empType = empTypes.find((t) => t.code === 'SHIFT_WORKER')!;
+  //   let empType = empTypes.find((t) => t.code === 'OFFICIAL')!;
+  //   if (tc.isPartTime) empType = empTypes.find((t) => t.code === 'PART_TIME')!;
+  //   if (tc.isStore) empType = empTypes.find((t) => t.code === 'SHIFT_WORKER')!;
 
-    employees.push(employeeRepo.create({
-      companyId,
-      userId: tc.id,
-      originId: `604465_${tc.id}`,
-      userName: tc.userName,
-      fullName: tc.fullName,
-      email: `${tc.userName}@upbase.global`,
-      phoneNumber: faker.phone.number(),
-      gender: isFemale ? 'FEMALE' : 'MALE',
-      birthday: faker.date.birthdate({ min: 22, max: 48, mode: 'age' }),
-      joinedAt,
-      resignedAt: null,
-      workLocation: tc.isStore ? workLocationStore : workLocationOffice,
-      departments: [tc.isStore ? deptStore : deptOffice],
-      attendanceGroup: selectedGroup,
-      jobLevel: randomFromArray(jobLevels),
-      employeeType: empType,
-      employeeStatus: empStatuses.find((s) => s.code === 'WORKING') || empStatuses[0],
-      attendanceMethod: attMethods.find(m => m.code === 'TIME_MACHINE') || attMethods[0],
-      is_saturday_off: !!tc.isSaturdayOff,
-      is_angel: false,
-      is_maternity_shift: !!tc.isMaternity,
-      leavePolicy: leavePolicy,
-      larkId: `lark_${tc.id}`,
-    }));
-  }
+  //   employees.push(employeeRepo.create({
+  //     companyId,
+  //     userId: tc.id,
+  //     originId: `604465_${tc.id}`,
+  //     userName: tc.userName,
+  //     fullName: tc.fullName,
+  //     email: `${tc.userName}@upbase.global`,
+  //     phoneNumber: faker.phone.number(),
+  //     gender: isFemale ? 'FEMALE' : 'MALE',
+  //     birthday: faker.date.birthdate({ min: 22, max: 48, mode: 'age' }),
+  //     joinedAt,
+  //     resignedAt: null,
+  //     workLocation: tc.isStore ? workLocationStore : workLocationOffice,
+  //     departments: [tc.isStore ? deptStore : deptOffice],
+  //     attendanceGroup: selectedGroup,
+  //     jobLevel: randomFromArray(jobLevels),
+  //     employeeType: empType,
+  //     employeeStatus: empStatuses.find((s) => s.code === 'WORKING') || empStatuses[0],
+  //     attendanceMethod: attMethods.find(m => m.code === 'TIME_MACHINE') || attMethods[0],
+  //     is_saturday_off: !!tc.isSaturdayOff,
+  //     is_angel: false,
+  //     is_maternity_shift: !!tc.isMaternity,
+  //     leavePolicy: leavePolicy,
+  //     larkId: `lark_${tc.id}`,
+  //   }));
+  // }
 
-  const savedEmployees = await employeeRepo.save(employees);
-  console.log(`--- Đã seed thành công ${savedEmployees.length} nhân viên test cases ---`);
+  // const savedEmployees = await employeeRepo.save(employees);
+  // console.log(`--- Đã seed thành công ${savedEmployees.length} nhân viên test cases ---`);
 
   console.log('✅ Hoàn thành seed dữ liệu – đầy đủ các trường hợp nghiệp vụ');
 };

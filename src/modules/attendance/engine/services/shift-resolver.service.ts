@@ -12,10 +12,11 @@ export class ShiftResolverService {
   constructor(
     @InjectRepository(Shift)
     private shiftRepo: Repository<Shift>,
-  ) {}
+  ) { }
 
   async resolveShift(context: CalculationContext): Promise<ShiftContext> {
     const { employee } = context;
+    console.log('employee', employee);
     const defaultShiftId = employee.attendanceGroup?.defaultShiftId;
     const defaultShift = employee.attendanceGroup?.defaultShift;
 

@@ -18,10 +18,10 @@ export class RequestDetailTimeOff extends BaseEntity {
   @Column({ nullable: true })
   leave_type_details: string;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'datetime2' })
   start_time: Date;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'datetime2' })
   end_time: Date;
 
   @Column({ type: 'float' })

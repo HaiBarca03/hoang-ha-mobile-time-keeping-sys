@@ -22,9 +22,17 @@ import { AttendanceDailyTimesheet } from '../../attendance/entities/attendance-d
 import { WorkLocation } from './work-locations.entity';
 import { Department } from './department.entity';
 
+// @Entity('employees')
+// @Index(['companyId', 'userId'], { unique: true })
+// @Index(['companyId', 'larkId'], { unique: true })
+// @Index(['companyId', 'email'])
+// @Index(['managerId'])
 @Entity('employees')
 @Index(['companyId', 'userId'], { unique: true })
-@Index(['companyId', 'larkId'], { unique: true })
+@Index('IDX_UNIT_LARK', ['companyId', 'larkId'], {
+  unique: true,
+  where: '[lark_id] IS NOT NULL'
+})
 @Index(['companyId', 'email'])
 @Index(['managerId'])
 export class Employee extends BaseEntity {

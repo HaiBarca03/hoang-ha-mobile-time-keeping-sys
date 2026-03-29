@@ -14,7 +14,7 @@ import { ImportLeaveDto } from './dto/import-leave.dto';
 export class ApprovalManagementController {
   constructor(private readonly leaveService: ApprovalManagementService) { }
 
-  @Post('import-external-data')
+  @Post('')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Import JSON thô từ Base' })
   async importData(

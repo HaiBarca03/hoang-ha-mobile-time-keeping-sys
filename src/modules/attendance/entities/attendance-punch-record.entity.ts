@@ -23,16 +23,16 @@ export class AttendancePunchRecord extends BaseEntity {
   @Column({ type: 'integer', nullable: true })
   day: number;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'datetime2' })
   punch_time: Date;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'nvarchar', length: 'max', nullable: true })
   punch_type?: string | null;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'nvarchar', length: 'max', nullable: true })
   punch_result?: string | null;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'nvarchar', length: 'max', nullable: true })
   source_type?: string | null;
 
   @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
@@ -41,22 +41,22 @@ export class AttendancePunchRecord extends BaseEntity {
   @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
   longitude?: number | null;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'nvarchar', length: 'max', nullable: true })
   address?: string | null;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'nvarchar', length: 'max', nullable: true })
   device_id?: string | null;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'nvarchar', length: 'max', nullable: true })
   ssid?: string | null;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'nvarchar', length: 'max', nullable: true })
   photo_url?: string | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime2', nullable: true })
   shift_time_target?: Date | null;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'simple-json', nullable: true })
   raw_payload?: Record<string, any> | null;
 
   @Index()
@@ -67,7 +67,7 @@ export class AttendancePunchRecord extends BaseEntity {
   })
   processing_status: 'PENDING' | 'PROCESSING' | 'PROCESSED' | 'FAILED';
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'nvarchar', length: 'max', nullable: true })
   last_error?: string | null;
 
   @Column({ type: 'integer', default: 0 })
@@ -77,7 +77,7 @@ export class AttendancePunchRecord extends BaseEntity {
   @Column({ type: 'varchar', nullable: true })
   job_id?: string | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime2', nullable: true })
   processed_at?: Date | null;
 
   @ManyToOne(() => Company, (company) => company.attendancePunchRecords)

@@ -11,16 +11,16 @@ export class AttendanceDailyPunch extends BaseEntity {
   @Column()
   punch_index: number;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime2', nullable: true })
   check_in_time?: Date | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime2', nullable: true })
   check_out_time?: Date | null;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'nvarchar', length: 'max', nullable: true })
   check_in_result?: string | null;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'nvarchar', length: 'max', nullable: true })
   check_out_result?: string | null;
 
   @Column({ type: 'decimal', precision: 6, scale: 2, default: 0 })
@@ -35,10 +35,10 @@ export class AttendanceDailyPunch extends BaseEntity {
   @Column({ default: false })
   miss_check_out: boolean;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime2', nullable: true })
   check_in_actual: Date | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime2', nullable: true })
   check_out_actual: Date | null;
 
   @ManyToOne(() => AttendanceDailyTimesheet, (ts) => ts.punches)

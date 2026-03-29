@@ -21,7 +21,7 @@ export class LeavePolicyRule extends BaseEntity {
   })
   quotaDays: number | null;
 
-  @Column({ name: 'is_deduct_leave', type: 'boolean', default: true })
+  @Column({ name: 'is_deduct_leave', default: true })
   isDeductLeave: boolean;
 
   // --- Relationships ---

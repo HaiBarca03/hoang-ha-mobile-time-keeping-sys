@@ -4,7 +4,6 @@ import {
   Query,
   Param,
   ParseIntPipe,
-  ParseUUIDPipe,
   Body,
   Patch,
   Post,
@@ -26,7 +25,7 @@ import { CreateManyEmployeesDto } from './dto/create-many-employees.dto';
 @ApiTags('master-data')
 @Controller('master-data')
 export class MasterDataController {
-  constructor(private readonly masterDataService: MasterDataService) {}
+  constructor(private readonly masterDataService: MasterDataService) { }
 
   @Get('employees')
   @ApiOperation({
@@ -91,33 +90,39 @@ export class MasterDataController {
   })
   @ApiBody({ type: CreateManyEmployeesDto }) // Sử dụng DTO bọc mảng
   async createManyEmployees(@Body() body: CreateManyEmployeesDto) {
-    console.log('body', body);
-    return this.masterDataService.createManyEmployees(body.data);
+    // console.log('body', body);
+    const result = await this.masterDataService.createManyEmployees(body.data);
+    return result;
   }
 
-  // @Patch('employees/:id')
-  // @ApiOperation({
-  //   summary: 'Cập nhật thông tin nhân viên',
-  //   description:
-  //     'Cập nhật nhân viên theo ID, hỗ trợ cập nhật quan hệ qua originID',
-  // })
-  // @ApiParam({
-  //   name: 'id',
-  //   description: 'ID nội bộ của nhân viên (bigint/string)',
-  // })
-  // @ApiBody({ type: UpdateEmployeeDto })
-  // @ApiResponse({
-  //   status: 200,
-  //   description: 'Cập nhật nhân viên thành công',
-  // })
-  // @ApiResponse({
-  //   status: 404,
-  //   description: 'Không tìm thấy nhân viên',
-  // })
-  // async updateEmployee(
-  //   @Param('id') id: string,
-  //   @Body() updateEmployeeDto: UpdateEmployeeDto,
-  // ) {
-  //   return this.masterDataService.updateEmployee(id, updateEmployeeDto);
-  // }
+  @Patch('employees/:id')
+  @ApiOperation({
+    summary: 'Cập nhật thông tin nhân viên',
+    description: 'Cập nhật nhân viên theo ID, hỗ trợ cập nhật quan hệ qua originID',
+  })
+  @ApiParam({ name: 'id', description: 'ID nội bộ của nhân viên (bigint/string)' })
+  @ApiBody({ type: UpdateEmployeeDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Cập nhật nhân viên thành công',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Không tìm thấy nhân viên',
+  })
+  async updateEmployee(
+    @Param('id') id: string,
+    @Body() updateEmployeeDto: UpdateEmployeeDto,
+  ) {
+    return this.masterDataService.updateEmployee(id, updateEmployeeDto);
+  }
+  @Post('employees/bulk-update')
+  @ApiOperation({
+    summary: 'Cập nhật hàng loạt nhân viên',
+    description: 'Nhận vào một danh sách nhân viên để cập nhật theo originId/userId',
+  })
+  @ApiBody({ type: CreateManyEmployeesDto })
+  async updateManyEmployees(@Body() body: CreateManyEmployeesDto) {
+    return this.masterDataService.updateManyEmployees(body.data);
+  }
 }

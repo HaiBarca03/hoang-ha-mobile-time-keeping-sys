@@ -9,10 +9,10 @@ export class RequestDetailAdjustment extends BaseEntity {
   attendance_request_id: string;
 
   // --- Correction ---
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime2', nullable: true })
   original_record: Date; 
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime2', nullable: true })
   replenishment_time: Date;
 
   // --- Maternity ---

@@ -15,7 +15,7 @@ export class WorkLocation extends BaseEntity {
   @Column({ name: 'location_name', type: 'varchar' })
   locationName: string;
 
-  @Column({ name: 'address', type: 'text', nullable: true })
+  @Column({ name: 'address', type: 'nvarchar', length: 'max', nullable: true })
   address: string;
 
   @Column({

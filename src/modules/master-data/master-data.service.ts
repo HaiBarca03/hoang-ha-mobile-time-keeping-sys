@@ -5,10 +5,8 @@ import { Employee } from './entities/employee.entity';
 import { Company } from './entities/company.entity';
 import { BusinessException } from 'src/exceptions/business.exception';
 import { BusinessCodes } from 'src/constants';
-import { userInfo } from 'os';
 import { AttendanceGroup } from './entities/attendance-group.entity';
 import { AttendanceMethod } from './entities/attendance-method.entity';
-import { EmployeeStatusDto } from './dto/employee-list-item.dto';
 import { EmployeeType } from './entities/employee-type.entity';
 import { JobLevel } from './entities/job-level.entity';
 import { LeavePolicy } from './entities/leave-policy.entity';
@@ -333,7 +331,6 @@ export class MasterDataService {
         Object.assign(employee, relations);
 
         employeesToSave.push(employee);
-        successList.push({ originId: cleanedDto.originId || cleanedDto.userId });
       } catch (error) {
         errorList.push({
           originId: dto.originId || dto.userId,
@@ -344,7 +341,35 @@ export class MasterDataService {
 
     // --- BƯỚC 5: Lưu hàng loạt (Batch Save) ---
     if (employeesToSave.length > 0) {
-      await this.employeeRepository.save(employeesToSave);
+      try {
+        // Thử lưu tất cả
+        await this.employeeRepository.save(employeesToSave);
+
+        employeesToSave.forEach(emp => {
+          successList.push({ originId: emp.originId || emp.userId });
+        });
+      } catch (dbError) {
+        console.error('\n==== [LỖI LƯU HÀNG LOẠT] (Batch Insert) ====');
+        console.error('Message:', dbError.message);
+        if (dbError.detail) console.error('Detail:', dbError.detail);
+        if (dbError.table) console.error('Table:', dbError.table);
+        console.error('================================================\n');
+
+        // NẾU BỊ LỖI Ở ĐÂY: Thường là do Duplicate Key, Check Constraint
+        // Nếu save batch lỗi, ta sẽ thử save từng cái để lọc ra chính xác thằng nào lỗi
+        for (const emp of employeesToSave) {
+          try {
+            await this.employeeRepository.save(emp);
+            successList.push({ originId: emp.originId || emp.userId });
+          } catch (singleError) {
+            console.error(`--> Lỗi ghi Database cho nhân viên [${emp.userId}]:`, singleError.message);
+            errorList.push({
+              originId: emp.originId || emp.userId,
+              reason: `DB Error: ${singleError.message} | ${singleError.detail || ''}`,
+            });
+          }
+        }
+      }
     }
 
     return {
@@ -450,7 +475,6 @@ export class MasterDataService {
 
     return relations;
   }
-
   private cleanData(dto: CreateEmployeeDto | UpdateEmployeeDto) {
     const cleaned = { ...dto };
 
@@ -467,5 +491,215 @@ export class MasterDataService {
     }
 
     return cleaned;
+  }
+
+  async updateEmployee(id: string, dto: UpdateEmployeeDto) {
+    const employee = await this.findOneEmployee(id);
+
+    const relations = await this.resolveOriginIds(dto);
+    const cleanedDto = this.cleanData(dto);
+
+    Object.assign(employee, {
+      ...cleanedDto,
+      ...relations,
+    });
+
+    return await this.employeeRepository.save(employee);
+  }
+  async updateManyEmployees(dtos: CreateEmployeeDto[]) {
+    const successList: any[] = [];
+    const errorList: any[] = [];
+
+    const userIds = new Set<string>();
+    const originIds = new Set<string>();
+    const companyOriginIds = new Set<string>();
+    const workLocationOriginIds = new Set<string>();
+    const attendanceGroupOriginIds = new Set<string>();
+    const jobLevelCodes = new Set<string>();
+    const employeeTypeCodes = new Set<string>();
+    const employeeStatusCodes = new Set<string>();
+    const attendanceMethodCodes = new Set<string>();
+    const managerOriginIds = new Set<string>();
+    const departmentOriginIds = new Set<string>();
+
+    for (const dto of dtos) {
+      if (dto.userId) userIds.add(dto.userId);
+      if (dto.originId) originIds.add(dto.originId);
+      if (dto.companyOriginId) companyOriginIds.add(dto.companyOriginId);
+      if (dto.workLocationOriginId) workLocationOriginIds.add(dto.workLocationOriginId);
+      if (dto.attendanceGroupOriginId) attendanceGroupOriginIds.add(dto.attendanceGroupOriginId);
+      if (dto.jobLevel) jobLevelCodes.add(dto.jobLevel);
+      if (dto.employeeType) employeeTypeCodes.add(dto.employeeType);
+      if (dto.employeeStatus) employeeStatusCodes.add(dto.employeeStatus);
+      if (dto.attendanceMethod) attendanceMethodCodes.add(dto.attendanceMethod);
+      if (dto.managerOriginId) managerOriginIds.add(dto.managerOriginId);
+      if (dto.departmentOriginIds) {
+        dto.departmentOriginIds.forEach(id => {
+          if (id && id.trim() !== '') departmentOriginIds.add(id);
+        });
+      }
+    }
+
+    const [
+      existingEmployees,
+      companies,
+      locations,
+      groups,
+      jobLevels,
+      empTypes,
+      empStatuses,
+      attMethods,
+      managers,
+      departments,
+    ] = await Promise.all([
+      this.employeeRepository.find({
+        where: [
+          { userId: In([...userIds]) },
+          { originId: In([...originIds]) },
+        ],
+      }),
+      this.companyRepository.findBy({ originId: In([...companyOriginIds]) }),
+      this.workLocationRepository.findBy({ originId: In([...workLocationOriginIds]) }),
+      this.attendanceGroupRepository.findBy({ originId: In([...attendanceGroupOriginIds]) }),
+      this.jobLevelRepository.findBy({ code: In([...jobLevelCodes]) }),
+      this.employeeTypeRepository.findBy({ code: In([...employeeTypeCodes]) }),
+      this.employeeStatusRepository.findBy({ code: In([...employeeStatusCodes]) }),
+      this.attendanceMethodRepository.findBy({ code: In([...attendanceMethodCodes]) }),
+      this.employeeRepository.findBy({ originId: In([...managerOriginIds]) }),
+      this.departmentRepository.findBy({ originId: In([...departmentOriginIds]) }),
+    ]);
+
+    const employeeMap = new Map();
+    existingEmployees.forEach(e => {
+      if (e.userId) employeeMap.set(e.userId, e);
+      if (e.originId) employeeMap.set(e.originId, e);
+    });
+
+    const companyMap = new Map(companies.map(c => [c.originId, c]));
+    const locationMap = new Map(locations.map(l => [l.originId, l]));
+    const groupMap = new Map(groups.map(g => [g.originId, g]));
+    const jobLevelMap = new Map(jobLevels.map(j => [j.code, j]));
+    const empTypeMap = new Map(empTypes.map(t => [t.code, t]));
+    const empStatusMap = new Map(empStatuses.map(s => [s.code, s]));
+    const attMethodMap = new Map(attMethods.map(m => [m.code, m]));
+    const managerMap = new Map(managers.map(m => [m.originId, m]));
+    const deptMap = new Map(departments.map(d => [d.originId, d]));
+
+    const employeesToUpdate: Employee[] = [];
+
+    for (const dto of dtos) {
+      try {
+        const cleanedDto = this.cleanData(dto);
+        const employee = employeeMap.get(cleanedDto.originId) || employeeMap.get(cleanedDto.userId);
+
+        if (!employee) {
+          throw new Error(`Employee with originId/userId not found`);
+        }
+
+        const relations: any = {};
+
+        if (cleanedDto.companyOriginId) {
+          const company = companyMap.get(cleanedDto.companyOriginId);
+          if (company) {
+            relations.company = company;
+            relations.companyId = company.id;
+          }
+        }
+
+        if (cleanedDto.workLocationOriginId) {
+          const loc = locationMap.get(cleanedDto.workLocationOriginId);
+          if (loc) relations.workLocationId = loc.id;
+        }
+
+        if (cleanedDto.attendanceGroupOriginId) {
+          const g = groupMap.get(cleanedDto.attendanceGroupOriginId);
+          if (g) relations.attendanceGroup = g;
+        }
+
+        if (cleanedDto.jobLevel) {
+          const jl = jobLevelMap.get(cleanedDto.jobLevel);
+          if (jl) relations.jobLevel = jl;
+        }
+
+        if (cleanedDto.employeeType) {
+          const et = empTypeMap.get(cleanedDto.employeeType);
+          if (et) relations.employeeType = et;
+        }
+
+        if (cleanedDto.employeeStatus) {
+          const es = empStatusMap.get(cleanedDto.employeeStatus);
+          if (es) relations.employeeStatus = es;
+        }
+
+        if (cleanedDto.attendanceMethod) {
+          const am = attMethodMap.get(cleanedDto.attendanceMethod);
+          if (am) relations.attendanceMethod = am;
+        }
+
+        if (cleanedDto.managerOriginId) {
+          const m = managerMap.get(cleanedDto.managerOriginId);
+          if (m) {
+            relations.manager = m;
+            relations.managerId = m.id;
+          }
+        }
+
+        if (cleanedDto.departmentOriginIds && cleanedDto.departmentOriginIds.length > 0) {
+          relations.departments = cleanedDto.departmentOriginIds
+            .map(id => deptMap.get(id))
+            .filter(d => !!d);
+        }
+
+        Object.assign(employee, cleanedDto);
+        Object.assign(employee, relations);
+
+        employeesToUpdate.push(employee);
+      } catch (error) {
+        errorList.push({
+          originId: dto.originId || dto.userId,
+          reason: error.message,
+        });
+      }
+    }
+
+    if (employeesToUpdate.length > 0) {
+      try {
+        await this.employeeRepository.save(employeesToUpdate);
+
+        employeesToUpdate.forEach(emp => {
+          successList.push({ originId: emp.originId || emp.userId });
+        });
+      } catch (dbError) {
+        console.error('\n==== [LỖI CẬP NHẬT HÀNG LOẠT] (Batch Update) ====');
+        console.error('Message:', dbError.message);
+        if (dbError.detail) console.error('Detail:', dbError.detail);
+        console.error('================================================\n');
+
+        for (const emp of employeesToUpdate) {
+          try {
+            await this.employeeRepository.save(emp);
+            successList.push({ originId: emp.originId || emp.userId });
+          } catch (singleError) {
+            console.error(`--> Lỗi update cho nhân viên [${emp.userId}]:`, singleError.message);
+            errorList.push({
+              originId: emp.originId || emp.userId,
+              reason: `DB Error: ${singleError.message} | ${singleError.detail || ''}`,
+            });
+          }
+        }
+      }
+    }
+
+    return {
+      summary: {
+        total: dtos.length,
+        updated: employeesToUpdate.length,
+        failed: errorList.length,
+      },
+      data: {
+        success: successList,
+        failed: errorList,
+      },
+    };
   }
 }

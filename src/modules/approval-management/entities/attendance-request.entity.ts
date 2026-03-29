@@ -33,7 +33,7 @@ export class AttendanceRequest extends BaseEntity {
   @Column({ type: 'date' })
   applied_date: Date;
 
-  @Column({ type: 'boolean', default: true })
+  @Column({ default: true })
   is_counted: boolean; // 1: Tính công, 0: Quá hạn
 
   @Column({ type: 'float', nullable: true })
@@ -47,8 +47,8 @@ export class AttendanceRequest extends BaseEntity {
   leave_type_id: string | null;
 
   @Column({
-    type: 'enum',
-    enum: RequestType,
+    type: 'varchar',
+    length: 20,
   })
   type: RequestType;
 
@@ -58,7 +58,7 @@ export class AttendanceRequest extends BaseEntity {
   @Column({ nullable: true, unique: true })
   record_id: string;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'simple-json', nullable: true })
   raw_data: any;
 
   // --- Relationships ---

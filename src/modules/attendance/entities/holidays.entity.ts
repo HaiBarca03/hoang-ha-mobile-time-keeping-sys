@@ -10,8 +10,8 @@ export class Holiday extends BaseEntity {
   holiday_date: Date;
 
   @Column({
-    type: 'enum',
-    enum: ['PUBLIC', 'SPECIAL', 'ANGEL'],
+    type: 'varchar',
+    length: 20,
     default: 'PUBLIC'
   })
   holiday_type: string; 

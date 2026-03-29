@@ -1,4 +1,3 @@
-// src/modules/attendance/attendance.module.ts
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AttendancePunchRecord } from './entities/attendance-punch-record.entity';

@@ -6,7 +6,6 @@ import { AttendancePunchRecord } from './entities/attendance-punch-record.entity
 import { In, Repository } from 'typeorm';
 import { Employee } from '../master-data/entities/employee.entity';
 import { AttendanceMonthlyTimesheet } from './entities/attendance-monthly-timesheet.entity';
-import { format } from 'date-fns';
 import { RawPunchInputDto } from './engine/dto/raw-punch.input';
 import { BatchPunchResultDto } from './dto/batch-punch-result.dto';
 
@@ -172,6 +171,66 @@ export class AttendanceService {
     return results;
   }
 
+  async calculateForEmployeeByPunchRecords(companyId: string, employeeId: string) {
+    this.logger.log(`[Check Calc] Starting check for employee ${employeeId} in company ${companyId}`);
+
+    // 1. Lấy danh sách các ngày (day) duy nhất mà nhân viên này có dữ liệu chấm công
+    // Dùng queryBuilder để lấy distinct 'day' từ bảng attendance_punch_records
+    const punchDays = await this.punchRecordRepo
+      .createQueryBuilder('punch')
+      .select('punch.day')
+      .where('punch.company_id = :companyId', { companyId })
+      .andWhere('punch.employee_id = :employeeId', { employeeId })
+      .distinct(true)
+      .getRawMany();
+
+    if (!punchDays || punchDays.length === 0) {
+      this.logger.warn(`No punch records found for employee ${employeeId}`);
+      return { message: 'No data to calculate', success: 0 };
+    }
+
+    this.logger.log(`Found ${punchDays.length} days with punch records.`);
+
+    const results: {
+      employeeId: string;
+      totalDays: number;
+      details: any[]; // Định nghĩa là mảng bất kỳ để có thể push object vào
+    } = {
+      employeeId,
+      totalDays: punchDays.length,
+      details: [],
+    };
+
+    // 2. Lặp qua từng ngày để tính toán
+    for (const record of punchDays) {
+      const dateStr = record.punch_day.toString(); // Giả sử format 20260325
+      const year = parseInt(dateStr.substring(0, 4));
+      const month = parseInt(dateStr.substring(4, 6)) - 1;
+      const day = parseInt(dateStr.substring(6, 8));
+      const calcDate = new Date(year, month, day);
+
+      try {
+        // Gọi Engine để tính toán. 
+        // LƯU Ý: Nếu hàm calculateDailyForEmployee của bạn có logic UPDATE DB, 
+        // bạn nên cân nhắc tạo một hàm riêng trong Engine chỉ để return kết quả (dry-run).
+        const dailyResult = await this.attendanceEngine.calculateDailyForEmployee(employeeId, calcDate);
+
+        results.details.push({
+          date: this.formatDate(calcDate),
+          status: 'Success',
+          result: dailyResult // Kết quả trả về từ engine
+        });
+      } catch (error) {
+        results.details.push({
+          date: this.formatDate(calcDate),
+          status: 'Failed',
+          error: error.message
+        });
+      }
+    }
+
+    return results;
+  }
   async calculateDailyTimesheet(
     employeeId: string,
     date: Date,
@@ -207,10 +266,8 @@ export class AttendanceService {
       const isMonthOnly = /^\d{4}-\d{2}$/.test(date);
 
       if (isFullDate) {
-        const attendanceDate = new Date(date);
-
-        qb.andWhere('DATE(timesheet.attendance_date) = :attendanceDate', {
-          attendanceDate: date, // truyền string yyyy-mm-dd luôn cho an toàn
+        qb.andWhere('CAST(timesheet.attendance_date AS DATE) = :attendanceDate', {
+          attendanceDate: date,
         });
       } else if (isMonthOnly) {
         const [year, month] = date.split('-').map(Number);

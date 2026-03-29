@@ -19,9 +19,11 @@ export class RawPunchInputDto {
   @ApiProperty({
     example: '2026-03-23T08:30:00.000Z',
     description: 'Thời gian chấm công dạng ISO string',
+    required: false
   })
+  @IsOptional()
   @IsDateString()
-  punch_time: string;
+  punch_time?: string;
 
   @ApiProperty({ example: 23 })
   @IsNumber()
