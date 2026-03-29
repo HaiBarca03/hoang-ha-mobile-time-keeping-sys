@@ -117,6 +117,9 @@ export class AttendanceDailyTimesheet extends BaseEntity {
   @Column({ type: 'decimal', precision: 6, scale: 2, default: 0 })
   adjustment_hours: number;
 
+  @Column({ type: 'decimal', precision: 6, scale: 2, default: 0 })
+  workday_count: number;
+
   @Column({ default: 'Lack' })
   attendance_status: string;
 

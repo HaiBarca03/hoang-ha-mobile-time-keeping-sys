@@ -25,6 +25,9 @@ export class AttendanceMonthlyTimesheet extends BaseEntity {
   total_work_days: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 3, default: 0 })
+  total_workday_count: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 3, default: 0 })
   total_paid_days: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })

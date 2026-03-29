@@ -274,10 +274,9 @@ export class AttendanceEngine {
     else if (currentWorkday > 0) timesheet.attendance_status = 'Partial';
     else timesheet.attendance_status = 'Lack';
 
-    // --- 5. Tạm thời lưu công vào adjustment_hours hoặc field mới ---
-    // Vì Entity chưa có actual_workday, mình tạm gán vào adjustment_hours để test
-    // Khuyên dùng: Bạn nên thêm @Column({ type: 'float' }) actual_workday vào Entity.
-    timesheet.adjustment_hours = currentWorkday;
+    // --- 5. Lưu công cuối cùng vào trường chuyên dụng ---
+    // (Adjustment_hours trả lại đúng vai trò là giờ điều chỉnh từ Admin/Phiếu điều chỉnh)
+    timesheet.workday_count = currentWorkday;
 
     timesheet.calculation_version = 'v1.0.0';
     timesheet.calculated_at = new Date();

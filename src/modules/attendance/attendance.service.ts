@@ -293,7 +293,8 @@ export class AttendanceService {
           'check-in': this.formatTimeToVietnam(ts.check_in_raw ?? undefined),
           'user-id': ts.employee.userId,
           'check-out': this.formatTimeToVietnam(ts.check_out_raw ?? undefined),
-          'Tổng công': parseFloat(String(ts.adjustment_hours ?? 0)),
+          'Công điều chỉnh': parseFloat(String(ts.adjustment_hours ?? 0)),
+          'Tổng công': parseFloat(String(ts.workday_count ?? 0)),
           'Nghỉ phép': parseFloat(String(ts.leave_hours ?? 0)),
           OT: parseFloat(String(ts.ot_hours ?? 0)),
           Remote: parseFloat(String(ts.remote_hours ?? 0)),
@@ -362,6 +363,8 @@ export class AttendanceService {
         'total_work_days',
       )
 
+      .addSelect('SUM(d.workday_count)', 'total_workday_count')
+
       .addSelect('SUM(d.actual_work_hours)', 'total_work_hours')
 
       .addSelect('SUM(d.late_minutes)', 'total_late_minutes')
@@ -408,6 +411,7 @@ export class AttendanceService {
       month,
       year,
       total_work_days: parseFloat(s.total_work_days || 0),
+      total_workday_count: parseFloat(s.total_workday_count || 0),
       total_work_hours: parseFloat(s.total_work_hours || 0),
       total_late_minutes: Number(s.total_late_minutes || 0),
       total_late_days: Number(s.total_late_days || 0),
