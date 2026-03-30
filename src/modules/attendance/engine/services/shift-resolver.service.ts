@@ -16,7 +16,7 @@ export class ShiftResolverService {
 
   async resolveShift(context: CalculationContext): Promise<ShiftContext> {
     const { employee } = context;
-    console.log('employee', employee);
+    // console.log('employee', employee);
     const defaultShiftId = employee.attendanceGroup?.defaultShiftId;
     const defaultShift = employee.attendanceGroup?.defaultShift;
 
