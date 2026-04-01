@@ -22,7 +22,9 @@ export class ApprovalManagementService {
   async importFromExternalSource(payload: any, companyId: string) {
     this.logger.log(`>>> BẮT ĐẦU IMPORT: companyId=${companyId}`);
 
-    const items: any[] = payload?.result
+    const items: any[] = Array.isArray(payload?.result)
+      ? payload.result
+      : payload?.result
       ? [payload.result]
       : payload?.recordId || payload?.SourceID
       ? [payload]
