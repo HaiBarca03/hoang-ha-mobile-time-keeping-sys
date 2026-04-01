@@ -6,6 +6,7 @@ import {
   AttendanceRequest,
   RequestType,
 } from '../../../approval-management/entities/attendance-request.entity';
+import { RequestStatus } from 'src/constants/approval-status.constants';
 import { differenceInMinutes, isBefore, max, min } from 'date-fns';
 
 @Injectable()
@@ -25,7 +26,7 @@ export class RemoteWorkStrategy {
       where: {
         employee_id: employee.id,
         type: RequestType.REMOTE,
-        status: 'Approved',
+        status: RequestStatus.APPROVED,
         applied_date: date,
       },
       relations: ['detail_time_off'],

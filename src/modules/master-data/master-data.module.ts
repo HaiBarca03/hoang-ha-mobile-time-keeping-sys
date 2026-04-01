@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { LeavePolicy } from './entities/leave-policy.entity';
 import { LeaveType } from './entities/leave-type.entity';
 import { AttendanceGroup } from './entities/attendance-group.entity';
 import { Company } from './entities/company.entity';
@@ -10,7 +9,6 @@ import { Shift } from './entities/shift.entity';
 import { EmployeeType } from './entities/employee-type.entity';
 import { MasterDataService } from './master-data.service';
 import { EmployeeStatus } from './entities/employee-status.entity';
-import { LeavePolicyRule } from './entities/leave-policy-rule.entity';
 import { JobLevel } from './entities/job-level.entity';
 import { WorkLocation } from './entities/work-locations.entity';
 import { Department } from './entities/department.entity';
@@ -27,8 +25,6 @@ import { AttendanceMethod } from './entities/attendance-method.entity';
       EmployeeType,
       Employee,
       JobLevel,
-      LeavePolicyRule,
-      LeavePolicy,
       LeaveType,
       ShiftRestRule,
       Shift,

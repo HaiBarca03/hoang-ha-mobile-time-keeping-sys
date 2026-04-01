@@ -15,7 +15,6 @@ import { JobLevel } from './job-level.entity';
 import { EmployeeType } from './employee-type.entity';
 import { EmployeeStatus } from './employee-status.entity';
 import { AttendanceMethod } from './attendance-method.entity';
-import { LeavePolicy } from './leave-policy.entity';
 import { AttendanceMonthlyTimesheet } from '../../attendance/entities/attendance-monthly-timesheet.entity';
 import { AttendancePunchRecord } from '../../attendance/entities/attendance-punch-record.entity';
 import { AttendanceDailyTimesheet } from '../../attendance/entities/attendance-daily-timesheet.entity';
@@ -116,10 +115,6 @@ export class Employee extends BaseEntity {
   @ManyToOne(() => AttendanceMethod)
   @JoinColumn({ name: 'attendance_method_id' })
   attendanceMethod: AttendanceMethod;
-
-  @ManyToOne(() => LeavePolicy)
-  @JoinColumn({ name: 'leave_policy_id' })
-  leavePolicy: LeavePolicy;
 
   @OneToMany(() => AttendanceDailyTimesheet, (ts) => ts.employee)
   attendanceTimesheets: AttendanceDailyTimesheet[];

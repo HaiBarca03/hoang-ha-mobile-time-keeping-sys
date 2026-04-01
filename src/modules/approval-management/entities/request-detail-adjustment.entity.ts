@@ -10,31 +10,10 @@ export class RequestDetailAdjustment extends BaseEntity {
 
   // --- Correction ---
   @Column({ type: 'datetime2', nullable: true })
-  original_record: Date; 
+  original_record: Date;
 
   @Column({ type: 'datetime2', nullable: true })
   replenishment_time: Date;
-
-  // --- Maternity ---
-  @Column({ nullable: true })
-  maternity_shift: string;
-
-  // Nếu thai sản áp dụng cho một khoảng thời gian
-  @Column({ type: 'date', nullable: true })
-  maternity_start_date: Date;
-
-  @Column({ type: 'date', nullable: true })
-  maternity_end_date: Date;
-
-  // --- Swap ---
-  @Column({ nullable: true })
-  employee_id_swap: string;
-
-  @Column({ type: 'date', nullable: true })
-  date_original_shift: Date; // Ngày gốc cần đổi
-
-  @Column({ type: 'date', nullable: true })
-  date_swap_shift: Date;     // Ngày đổi sang
 
   @OneToOne(() => AttendanceRequest, (req) => req.detail_adjustment)
   @JoinColumn({ name: 'attendance_request_id' })

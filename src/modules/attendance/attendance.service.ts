@@ -357,6 +357,7 @@ export class AttendanceService {
     const query = this.timesheetRepo
       .createQueryBuilder('d')
       .select('d.employee_id', 'employee_id')
+      .addSelect('MAX(d.department_code)', 'department_code')
 
       .addSelect(
         'SUM(d.actual_work_hours / NULLIF(d.total_work_hours_standard,0))',
@@ -408,6 +409,7 @@ export class AttendanceService {
     const records = stats.map((s) => ({
       company_id: companyId,
       employee_id: s.employee_id,
+      department_code: s.department_code || '',
       month,
       year,
       total_work_days: parseFloat(s.total_work_days || 0),

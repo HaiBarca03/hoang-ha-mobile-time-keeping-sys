@@ -161,6 +161,7 @@ export class AttendanceEngine {
         'attendanceMethod',
         'employeeType',
         'jobLevel',
+        'departments',
       ],
     });
 
@@ -201,6 +202,8 @@ export class AttendanceEngine {
     timesheet.month = context.date.getMonth() + 1;
     timesheet.year = context.date.getFullYear();
     timesheet.shift_id = context.shiftContext?.shift?.id;
+    timesheet.department_code =
+      context.employee.departments?.[0]?.departmentCode || '';
 
     // --- 2. Dữ liệu Check-in/out ---
     const primaryPunch =
@@ -267,7 +270,7 @@ export class AttendanceEngine {
     // OT
     timesheet.is_ot = (context.overtimeMinutes ?? 0) > 0;
     timesheet.ot_hours = (context.overtimeMinutes ?? 0) / 60;
-
+    timesheet.user_id = context.employee.userId;
     // Status dựa trên số công cuối cùng
     const currentWorkday = context.finalActualWorkday ?? 0;
     if (currentWorkday >= 1) timesheet.attendance_status = 'Full';

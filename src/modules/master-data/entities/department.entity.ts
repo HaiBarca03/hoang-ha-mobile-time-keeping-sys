@@ -18,6 +18,7 @@ export enum DepartmentStatus {
 
 @Entity('departments')
 @Index(['companyId', 'departmentName'], { unique: true })
+@Index(['companyId', 'departmentCode'], { unique: true })
 export class Department extends BaseEntity {
   @Column({ name: 'company_id', type: 'bigint' })
   companyId: string;

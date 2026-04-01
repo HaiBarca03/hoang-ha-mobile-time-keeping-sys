@@ -14,8 +14,6 @@ import { LeaveType } from '../../modules/master-data/entities/leave-type.entity'
 import { AttendanceMethod } from '../../modules/master-data/entities/attendance-method.entity';
 import { WorkLocation } from '../../modules/master-data/entities/work-locations.entity';
 import { Department } from '../../modules/master-data/entities/department.entity';
-import { LeavePolicy } from '../../modules/master-data/entities/leave-policy.entity';
-import { LeavePolicyRule } from '../../modules/master-data/entities/leave-policy-rule.entity';
 
 import { Holiday } from 'src/modules/attendance/entities/holidays.entity';
 
@@ -25,15 +23,12 @@ export const initDataSeed = async (dataSource: DataSource) => {
   const isMssql = dataSource.options.type === 'mssql';
 
   if (isMssql) {
-    // SQL Server equivalent: Disable constraints, delete data, and re-enable constraints
     await dataSource.query('EXEC sp_MSforeachtable "ALTER TABLE ? NOCHECK CONSTRAINT ALL"');
     for (const entity of dataSource.entityMetadatas) {
       await dataSource.query(`DELETE FROM "${entity.tableName}"`);
-      // Optional: Reseed identity if it exists
       try {
         await dataSource.query(`DBCC CHECKIDENT ("${entity.tableName}", RESEED, 0)`);
       } catch (e) {
-        // Table might not have an identity column or other issues, ignore
       }
     }
     await dataSource.query('EXEC sp_MSforeachtable "ALTER TABLE ? CHECK CONSTRAINT ALL"');
@@ -56,39 +51,6 @@ export const initDataSeed = async (dataSource: DataSource) => {
     status: 'ACTIVE',
   });
   const companyId = company1.id;
-
-  // 2. Công ty HSH Việt Nam
-  const company2 = await companyRepo.save({
-    originId: 'LED1Z523PXK',
-    companyName: 'Công ty TNHH Xuất nhập khẩu HSH Việt Nam',
-    taxCode: '0109876544',
-    address: 'Địa chỉ HSH',
-    status: 'ACTIVE',
-  });
-  const companyId2 = company2.id;
-
-  // 3. Công ty Winning & Co
-  const company3 = await companyRepo.save({
-    originId: 'LEGNPX0DA0G',
-    companyName: 'Công ty Cổ phần Winning & Co',
-    taxCode: '0109876545',
-    address: 'Địa chỉ Winning',
-    status: 'ACTIVE',
-  });
-  const companyId3 = company3.id;
-
-  // 4. Công ty Intellife
-  const company4 = await companyRepo.save({
-    originId: 'LMLND1GRZO3',
-    companyName: 'Công ty cổ phần Intellife',
-    taxCode: '0109876546',
-    address: 'Địa chỉ Intellife',
-    status: 'ACTIVE',
-  });
-  const companyId4 = company4.id;
-  // 2. MASTER DATA – Các bảng danh mục
-  // ──────────────────────────────────────────────
-  // JobLevel – các cấp bậc phổ biến
 
   const jobLevels = await dataSource.getRepository(JobLevel).save([
     { companyId, code: 'STAFF', levelName: 'Nhân viên', status: 'ACTIVE' },
@@ -195,31 +157,6 @@ export const initDataSeed = async (dataSource: DataSource) => {
       isDeductLeave: false,
     },
   ]);
-
-  const leavePolicy = await dataSource.getRepository(LeavePolicy).save({
-    companyId,
-    policyName: 'Chính sách nghỉ phép chuẩn 2026',
-    standardWorkdaysInPolicy: 22,
-    description: 'Áp dụng cho toàn công ty trừ trường hợp đặc biệt',
-  });
-
-  await dataSource.getRepository(LeavePolicyRule).save(
-    leaveTypes.map((lt) => ({
-      policyId: leavePolicy.id,
-      leaveTypeId: lt.id,
-      quotaDays:
-        lt.code === 'ANNUAL_LEAVE'
-          ? 14
-          : lt.code === 'MARRIAGE_SELF'
-            ? 3
-            : lt.code === 'MARRIAGE_CHILD'
-              ? 1
-              : lt.code === 'FUNERAL_LEAVE'
-                ? 3
-                : null,
-      isDeductLeave: lt.isDeductLeave,
-    })),
-  );
 
   const locationsData = [
     {
@@ -384,29 +321,29 @@ export const initDataSeed = async (dataSource: DataSource) => {
   const departmentRepo = dataSource.getRepository(Department);
 
   const departmentsToSave = [
-    { originId: '1261010615', departmentName: 'Nhóm Data và Planning', companyId },
-    { originId: 'fd592799e6d8612a', departmentName: 'Phòng Kinh doanh Format', companyId },
-    { originId: '1261010623', departmentName: 'Phòng Kinh doanh Market Place', companyId },
-    { originId: '1261010624', departmentName: 'Phòng kinh doanh O2O', companyId },
-    { originId: 'defbge38af6f1d6b', departmentName: 'Phòng Kinh Doanh TKL', companyId },
-    { originId: '1351010210', departmentName: 'Phòng Marketing F', companyId },
-    { originId: '1351020310', departmentName: 'Phòng Marketing T', companyId },
-    { originId: '1481020000', departmentName: 'Phòng Merchandise', companyId },
-    { originId: '1351030410', departmentName: 'Phòng Sáng tạo và Phát triển nội dung', companyId },
-    { originId: '1481090000', departmentName: 'Phòng Visual Merchandise', companyId },
-    { originId: '1481010000', departmentName: 'Phòng Cung ứng và Quản lý sản xuất', companyId },
-    { originId: '1491010000', departmentName: 'Phòng Kho vận', companyId },
-    { originId: '1111000000', departmentName: 'Phòng Nghiên cứu và Phát triển sản phẩm', companyId },
-    { originId: '1111020000', departmentName: 'Phòng Phát triển Mẫu', companyId },
-    { originId: '1511020000', departmentName: 'Ban Giám đốc', companyId },
-    { originId: '1211010000', departmentName: 'Nhóm Trợ lý Chủ tịch & Tổng giám đốc', companyId },
-    { originId: '1351030000', departmentName: 'Phòng Chăm sóc khách hàng', companyId },
-    { originId: '1441000000', departmentName: 'Phòng Công nghệ thông tin', companyId },
-    { originId: '1471020000', departmentName: 'Phòng Dự Án Xây Dựng', companyId },
-    { originId: '1451080000', departmentName: 'Phòng Nhân sự', companyId },
-    { originId: '1471010000', departmentName: 'Phòng phát triển mặt bằng', companyId },
-    { originId: '1451070000', departmentName: 'Phòng Quản trị nội bộ', companyId },
-    { originId: '1461000000', departmentName: 'Phòng Tài chính Kế toán', companyId },
+    { originId: '1261010615', departmentName: 'Nhóm Data và Planning', companyId, departmentCode: '1261010615' },
+    { originId: 'fd592799e6d8612a', departmentName: 'Phòng Kinh doanh Format', companyId, departmentCode: 'FORMAT' },
+    { originId: '1261010623', departmentName: 'Phòng Kinh doanh Market Place', companyId, departmentCode: '1261010623' },
+    { originId: '1261010624', departmentName: 'Phòng kinh doanh O2O', companyId, departmentCode: '1261010624' },
+    { originId: 'defbge38af6f1d6b', departmentName: 'Phòng Kinh Doanh TKL', companyId, departmentCode: 'TKL' },
+    { originId: '1351010210', departmentName: 'Phòng Marketing F', companyId, departmentCode: 'MKT_F' },
+    { originId: '1351020310', departmentName: 'Phòng Marketing T', companyId, departmentCode: 'MKT_T' },
+    { originId: '1481020000', departmentName: 'Phòng Merchandise', companyId, departmentCode: '1481020000' },
+    { originId: '1351030410', departmentName: 'Phòng Sáng tạo và Phát triển nội dung', companyId, departmentCode: 'CONTENT' },
+    { originId: '1481090000', departmentName: 'Phòng Visual Merchandise', companyId, departmentCode: 'VM' },
+    { originId: '1481010000', departmentName: 'Phòng Cung ứng và Quản lý sản xuất', companyId, departmentCode: '1481010000' },
+    { originId: '1491010000', departmentName: 'Phòng Kho vận', companyId, departmentCode: 'LOGISTICS' },
+    { originId: '1111000000', departmentName: 'Phòng Nghiên cứu và Phát triển sản phẩm', companyId, departmentCode: 'RND' },
+    { originId: '1111020000', departmentName: 'Phòng Phát triển Mẫu', companyId, departmentCode: 'SAMPLE' },
+    { originId: '1511020000', departmentName: 'Ban Giám đốc', companyId, departmentCode: 'BOD' },
+    { originId: '1211010000', departmentName: 'Nhóm Trợ lý Chủ tịch & Tổng giám đốc', companyId, departmentCode: 'PA' },
+    { originId: '1351030000', departmentName: 'Phòng Chăm sóc khách hàng', companyId, departmentCode: 'CS' },
+    { originId: '1441000000', departmentName: 'Phòng Công nghệ thông tin', companyId, departmentCode: 'IT' },
+    { originId: '1471020000', departmentName: 'Phòng Dự Án Xây Dựng', companyId, departmentCode: 'CONSTRUCTION' },
+    { originId: '1451080000', departmentName: 'Phòng Nhân sự', companyId, departmentCode: 'HR' },
+    { originId: '1471010000', departmentName: 'Phòng phát triển mặt bằng', companyId, departmentCode: 'REAL_ESTATE' },
+    { originId: '1451070000', departmentName: 'Phòng Quản trị nội bộ', companyId, departmentCode: 'ADMIN' },
+    { originId: '1461000000', departmentName: 'Phòng Tài chính Kế toán', companyId, departmentCode: 'ACC' },
   ];
 
   await departmentRepo.save(departmentsToSave);

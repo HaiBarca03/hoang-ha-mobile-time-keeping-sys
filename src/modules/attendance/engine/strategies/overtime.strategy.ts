@@ -6,7 +6,9 @@ import {
   AttendanceRequest,
   RequestType,
 } from '../../../approval-management/entities/attendance-request.entity';
+import { RequestStatus } from 'src/constants/approval-status.constants';
 import { differenceInMinutes, isBefore, max, min } from 'date-fns';
+import { OvertimeConversionCode } from 'src/constants/overtime-conversion.enum';
 
 @Injectable()
 export class OvertimeStrategy {
@@ -28,7 +30,7 @@ export class OvertimeStrategy {
       where: {
         employee_id: employee.id,
         type: RequestType.OVERTIME,
-        status: 'Approved',
+        status: RequestStatus.APPROVED,
         applied_date: date,
       },
       relations: ['detail_overtime'],
@@ -58,7 +60,7 @@ export class OvertimeStrategy {
       context.overtimeMinutes = otOverlapTime;
       context['ot_ratio'] = detail.ratio_convert;
 
-      if (detail.convert_type === 'Nghỉ bù') {
+      if (detail.convert_type === OvertimeConversionCode.COMPENSATORY_LEAVE) {
         context.overtimeCompensatoryMinutes = otOverlapTime;
       }
 

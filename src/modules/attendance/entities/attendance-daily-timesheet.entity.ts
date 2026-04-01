@@ -138,6 +138,12 @@ export class AttendanceDailyTimesheet extends BaseEntity {
   @Column({ default: false })
   is_saturday_candidate: boolean;
 
+  @Column({ type: 'varchar' })
+  user_id: string;
+
+  @Column({ type: 'varchar' })
+  department_code: string;
+
   @ManyToOne(() => Company, (company) => company.attendanceTimesheets)
   @JoinColumn({ name: 'company_id' })
   company: Company;

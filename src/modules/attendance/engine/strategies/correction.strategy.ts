@@ -6,6 +6,7 @@ import {
   AttendanceRequest,
   RequestType,
 } from '../../../approval-management/entities/attendance-request.entity';
+import { RequestStatus } from 'src/constants/approval-status.constants';
 
 @Injectable()
 export class CorrectionStrategy {
@@ -27,7 +28,7 @@ export class CorrectionStrategy {
       where: {
         employee_id: employee.id,
         type: RequestType.CORRECTION,
-        status: 'Approved',
+        status: RequestStatus.APPROVED,
         applied_date: date,
       },
       relations: ['detail_adjustment'],

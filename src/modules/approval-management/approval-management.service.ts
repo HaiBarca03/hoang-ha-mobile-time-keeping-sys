@@ -7,6 +7,8 @@ import { LeaveType } from '../master-data/entities/leave-type.entity';
 import { AttendanceEngine } from '../attendance/engine/attendance.engine';
 import { RequestDetailOvertime } from './entities/request-detail-overtime.entity';
 import { RequestDetailAdjustment } from './entities/request-detail-adjustment.entity';
+import { RequestStatus } from 'src/constants/approval-status.constants';
+import { OvertimeConversionCode } from 'src/constants/overtime-conversion.enum';
 
 @Injectable()
 export class ApprovalManagementService {
@@ -20,13 +22,11 @@ export class ApprovalManagementService {
   async importFromExternalSource(payload: any, companyId: string) {
     this.logger.log(`>>> BẮT ĐẦU IMPORT: companyId=${companyId}`);
 
-    // Hỗ trợ cả 2 cấu trúc:
-    //   Mới: { result: { Status, "Request No.", Requester, ... } }
-    //   Cũ:  { data: { items: [{ record_id, fields }] } }
-    const result = payload?.result;
-    const items: any[] = result
-      ? [result]
-      : (payload?.data?.items || []);
+    const items: any[] = payload?.result
+      ? [payload.result]
+      : payload?.recordId || payload?.SourceID
+      ? [payload]
+      : payload?.data?.items || [];
 
     this.logger.log(`>>> Số lượng bản ghi nhận được: ${items.length}`);
 
@@ -37,94 +37,92 @@ export class ApprovalManagementService {
     // Dùng Map để tránh trùng lặp task (Key: employeeId_YYYY-MM-DD)
     const taskMap = new Map<string, { employeeId: string; date: Date }>();
 
+    const results = {
+      successCount: 0,
+      failureCount: 0,
+      errors: [] as { record_id: string; message: string }[]
+    };
+
     try {
       for (const item of items) {
-        // --- Chuẩn hoá fields từ cả 2 schema ---
-        const isNewSchema = !!result;
+        // --- Chuẩn hoá fields từ Unified Schema ---
+        // Hỗ trợ cả trường hợp dữ liệu bị bọc thêm 1 lớp "result" (item.result)
+        const fields = item.result || item;
 
-        const record_id = isNewSchema
-          ? (item['SourceID'] as string)
-          : item.record_id;
+        const record_id = fields.recordId || fields.SourceID || fields.record_id;
+        const typeRaw = fields.Type || fields.approval_process || '';
+        const externalUserId = fields.RequesterID || fields.Requester?.[0]?.id || fields.fields?.['Người lập phiếu']?.[0]?.id;
+        const detailType = fields.DetailType || fields['Leave type'] || fields.fields?.['Chi tiết loại nghỉ'] || '';
+        const statusRaw = (fields.Status || fields.fields?.['Trạng thái duyệt'] || '').toString().toLowerCase();
+        const requestNoText = fields.RequestNo || fields['Request No.']?.text || fields.fields?.['Mã đơn']?.[0]?.text;
+        const note = fields.Note || fields.fields?.['Ghi chú'] || detailType;
 
-        const approvalProcess = isNewSchema
-          ? (item['Approval process'] || '')
-          : (item.fields?.['Loại đơn'] || item.fields?.['Approval process'] || '');
+        const startTime = this.parseTimestamp(fields.StartTime || fields['Start time'] || fields.fields?.['Thời gian bắt đầu']);
+        const endTime = this.parseTimestamp(fields.EndTime || fields['End time'] || fields.fields?.['Thời gian kết thúc']);
+        const totalHours = fields.Duration || fields.fields?.['Số giờ nghỉ'] || 0;
+        const adjustmentTime = fields.AdjustmentTime ? this.parseTimestamp(fields.AdjustmentTime) : null;
 
-        const externalUserId = isNewSchema
-          ? item['Requester']?.[0]?.id
-          : item.fields?.['Người lập phiếu']?.[0]?.id;
-
-        const leaveTypeName = isNewSchema
-          ? item['Leave type']
-          : item.fields?.['Chi tiết loại nghỉ'];
-
-        const statusRaw = isNewSchema
-          ? item['Status']
-          : item.fields?.['Trạng thái duyệt'];
-
-        const requestNoText = isNewSchema
-          ? item['Request No.']?.text
-          : item.fields?.['Mã đơn']?.[0]?.text;
-
-        // Start/End time: schema mới dùng ms timestamp, cũ dùng giá trị tuỳ ý
-        const startTime = new Date(isNewSchema
-          ? item['Start time']
-          : item.fields?.['Thời gian bắt đầu']);
-        const endTime = new Date(isNewSchema
-          ? item['End time']
-          : item.fields?.['Thời gian kết thúc']);
-
-        const totalHours = isNewSchema
-          ? item['Duration']
-          : item.fields?.['Số giờ nghỉ'];
-
-        this.logger.log(`--- Đang xử lý record_id: ${record_id} ---`);
+        this.logger.log(`--- Đang xử lý record_id: ${record_id} [${typeRaw}] ---`);
 
         const employee = await queryRunner.manager.findOne(Employee, {
           where: { userId: externalUserId, companyId: companyId },
         });
 
         if (!employee) {
-          this.logger.warn(`!!! THẤT BẠI: Không tìm thấy Employee với userId ${externalUserId}`);
+          const errMsg = `Không tìm thấy Employee với userId ${externalUserId}`;
+          this.logger.warn(`!!! THẤT BẠI: ${errMsg}`);
+          results.failureCount++;
+          results.errors.push({ record_id, message: errMsg });
           continue;
         }
 
-        // Xác định loại đơn
+        // Xác định loại đơn (RequestType enum)
         let type = RequestType.LEAVE;
-        const processStr = String(approvalProcess).toLowerCase();
-        if (processStr.includes('tăng ca')) type = RequestType.OVERTIME;
-        else if (processStr.includes('điều chỉnh')) type = RequestType.CORRECTION;
+        const typeStr = typeRaw.toUpperCase();
+        if (typeStr.includes('OVERTIME') || typeStr.includes('TĂNG CA')) type = RequestType.OVERTIME;
+        else if (typeStr.includes('REMOTE')) type = RequestType.REMOTE;
+        else if (typeStr.includes('CORRECTION') || typeStr.includes('ĐIỀU CHỈNH')) type = RequestType.CORRECTION;
 
-        const leaveType = await queryRunner.manager.findOne(LeaveType, {
-          where: { leaveTypeName: leaveTypeName, companyId: companyId },
-        });
-        console.log('leaveType', leaveType);
+        // Tìm loại nghỉ nếu là LEAVE
+        let leaveType: LeaveType | null = null;
+        if (type === RequestType.LEAVE && detailType) {
+          leaveType = await queryRunner.manager.findOne(LeaveType, {
+            where: { leaveTypeName: detailType, companyId: companyId },
+          });
+        }
 
         let request = await queryRunner.manager.findOne(AttendanceRequest, {
           where: { record_id: record_id },
         });
+
+        const oldStatus = request?.status?.toLowerCase();
 
         if (!request) {
           request = new AttendanceRequest();
           request.record_id = record_id;
         }
 
-        request.request_id = requestNoText;
+        const isApproved = statusRaw === RequestStatus.APPROVED;
+        const wasApproved = oldStatus === RequestStatus.APPROVED;
+        const isRejected = statusRaw === RequestStatus.REJECTED;
+
+        // Fallback: Nếu không có mã đơn thì dùng record_id để tránh lỗi NULL trong DB
+        request.request_id = requestNoText || record_id;
         request.employee_id = employee.id;
         request.company_id = companyId;
         request.status = statusRaw;
-        request.note = leaveTypeName;
+        request.note = note;
         request.type = type;
         request.applied_date = startTime;
         request.total_hours = totalHours;
         request.leave_type_id = leaveType?.id || null;
-        request.is_counted = true;
+        request.is_counted = isApproved;
         request.raw_data = item;
 
         const savedRequest = await queryRunner.manager.save(request);
 
         // 5. XỬ LÝ LƯU BẢNG DETAIL TƯƠNG ỨNG
-        if (type === RequestType.LEAVE) {
+        if (type === RequestType.LEAVE || type === RequestType.REMOTE) {
           let detail = await queryRunner.manager.findOne(RequestDetailTimeOff, {
             where: { attendance_request_id: savedRequest.id },
           });
@@ -134,7 +132,7 @@ export class ApprovalManagementService {
           detail.end_time = endTime;
           detail.hours = savedRequest.total_hours;
           detail.leave_type_id = savedRequest.leave_type_id;
-          detail.leave_type_details = leaveTypeName;
+          detail.leave_type_details = type === RequestType.REMOTE ? 'Remote Work' : detailType;
           await queryRunner.manager.save(detail);
         }
         else if (type === RequestType.OVERTIME) {
@@ -146,6 +144,13 @@ export class ApprovalManagementService {
           otDetail.start_time = startTime;
           otDetail.end_time = endTime;
           otDetail.hours_ratio = savedRequest.total_hours;
+
+          // Phân loại OT: Tăng ca (PAYMENT) vs Nghỉ bù (COMPENSATORY_LEAVE)
+          if (detailType.includes('Nghỉ bù') || detailType.includes('Nghĩ bù')) {
+            otDetail.convert_type = OvertimeConversionCode.COMPENSATORY_LEAVE;
+          } else {
+            otDetail.convert_type = OvertimeConversionCode.PAYMENT;
+          }
           await queryRunner.manager.save(otDetail);
         }
         else if (type === RequestType.CORRECTION) {
@@ -154,25 +159,28 @@ export class ApprovalManagementService {
           });
           if (!adjDetail) adjDetail = new RequestDetailAdjustment();
           adjDetail.attendance_request_id = savedRequest.id;
-          adjDetail.replenishment_time = startTime;
+          adjDetail.replenishment_time = adjustmentTime || startTime;
           await queryRunner.manager.save(adjDetail);
         }
 
-        // Gom danh sách ngày cần tính toán lại (Xử lý cả nghỉ nhiều ngày)
-        const today = new Date();
-        today.setHours(23, 59, 59, 999);
+        // Gom danh sách ngày cần tính toán lại
+        if (isApproved || (isRejected && wasApproved)) {
+          const today = new Date();
+          today.setHours(23, 59, 59, 999);
 
-        let tempDate = new Date(startTime);
-        while (tempDate <= endTime) {
-          if (tempDate <= today) {
-            const dateStr = tempDate.toISOString().split('T')[0];
-            const key = `${employee.id}_${dateStr}`;
-            if (!taskMap.has(key)) {
-              taskMap.set(key, { employeeId: employee.id, date: new Date(tempDate) });
+          let tempDate = new Date(startTime);
+          while (tempDate <= endTime) {
+            if (tempDate <= today) {
+              const dateStr = tempDate.toISOString().split('T')[0];
+              const key = `${employee.id}_${dateStr}`;
+              if (!taskMap.has(key)) {
+                taskMap.set(key, { employeeId: employee.id, date: new Date(tempDate) });
+              }
             }
+            tempDate.setDate(tempDate.getDate() + 1);
           }
-          tempDate.setDate(tempDate.getDate() + 1);
         }
+        results.successCount++;
       }
 
       this.logger.log(`>>> CHUẨN BỊ COMMIT TRANSACTION....`);
@@ -191,7 +199,11 @@ export class ApprovalManagementService {
           });
       });
 
-      return { success: true, message: `Successfully processed ${items.length} items.` };
+      return {
+        success: results.failureCount === 0,
+        message: `Processed ${items.length} items: ${results.successCount} succeeded, ${results.failureCount} failed.`,
+        data: results
+      };
 
     } catch (error) {
       this.logger.error('!!! LỖI TRONG QUÁ TRÌNH XỬ LÝ - ROLLBACK');
@@ -202,4 +214,12 @@ export class ApprovalManagementService {
       await queryRunner.release();
     }
   }
+
+  private parseTimestamp = (time: any) => {
+    if (!time) return new Date();
+    if (typeof time === 'string' && !isNaN(Number(time))) {
+      return new Date(Number(time));
+    }
+    return new Date(time);
+  };
 }
