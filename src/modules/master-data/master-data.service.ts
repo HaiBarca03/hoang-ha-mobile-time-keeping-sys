@@ -9,7 +9,6 @@ import { AttendanceGroup } from './entities/attendance-group.entity';
 import { AttendanceMethod } from './entities/attendance-method.entity';
 import { EmployeeType } from './entities/employee-type.entity';
 import { JobLevel } from './entities/job-level.entity';
-import { LeavePolicy } from './entities/leave-policy.entity';
 import { WorkLocation } from './entities/work-locations.entity';
 import { Department } from './entities/department.entity';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
@@ -39,9 +38,6 @@ export class MasterDataService {
 
     @InjectRepository(JobLevel)
     private readonly jobLevelRepository: Repository<JobLevel>,
-
-    @InjectRepository(LeavePolicy)
-    private readonly leavePolicyRepository: Repository<LeavePolicy>,
 
     @InjectRepository(WorkLocation)
     private readonly workLocationRepository: Repository<WorkLocation>,

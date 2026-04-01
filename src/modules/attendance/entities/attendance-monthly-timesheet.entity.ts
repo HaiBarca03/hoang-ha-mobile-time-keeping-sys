@@ -15,6 +15,9 @@ export class AttendanceMonthlyTimesheet extends BaseEntity {
   @Column({ type: 'varchar' })
   user_id: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  department_code: string;
+
   @Column()
   month: number;
 
