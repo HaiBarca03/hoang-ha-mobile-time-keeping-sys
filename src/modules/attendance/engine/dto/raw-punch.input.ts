@@ -23,7 +23,7 @@ export class RawPunchInputDto {
   })
   @IsOptional()
   @IsDateString()
-  punch_time?: string;
+  punch_time?: string | null;
 
   @ApiProperty({ example: 23 })
   @IsNumber()

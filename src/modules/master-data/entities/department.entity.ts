@@ -23,21 +23,21 @@ export class Department extends BaseEntity {
   @Column({ name: 'company_id', type: 'bigint' })
   companyId: string;
 
-  @Index({ unique: true })
-  @Column({ name: 'origin_id', type: 'varchar', unique: true, nullable: true })
+  @Index({ unique: true, where: 'origin_id IS NOT NULL' })
+  @Column({ name: 'origin_id', type: 'nvarchar', nullable: true })
   originId: string;
 
-  @Column({ name: 'department_name', type: 'varchar' })
+  @Column({ name: 'department_name', type: 'nvarchar' })
   departmentName: string;
 
-  @Column({ name: 'department_code', type: 'varchar', nullable: true })
+  @Column({ name: 'department_code', type: 'nvarchar', nullable: true })
   departmentCode: string;
 
   @Column({ name: 'parent_id', type: 'bigint', nullable: true })
   parentId: string;
 
   @Column({
-    type: 'varchar',
+    type: 'nvarchar',
     length: 20,
     default: DepartmentStatus.ACTIVE,
   })

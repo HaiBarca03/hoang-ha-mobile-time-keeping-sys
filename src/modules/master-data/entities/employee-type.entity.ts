@@ -9,10 +9,10 @@ export class EmployeeType extends BaseEntity {
   companyId: string;
 
   @Index()
-  @Column({ name: 'code', type: 'varchar', length: 50 })
+  @Column({ name: 'code', type: 'nvarchar', length: 50 })
   code: string;
 
-  @Column({ name: 'type_name', type: 'varchar' })
+  @Column({ name: 'type_name', type: 'nvarchar' })
   typeName: string;
 
   // --- Relationships ---

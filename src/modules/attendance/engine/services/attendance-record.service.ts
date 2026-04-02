@@ -33,7 +33,7 @@ export class AttendanceRecordService {
     return {
       company_id: companyId,
       external_user_id: userTask.user_id,
-      punch_time: larkRecord?.check_time ? new Date(parseInt(larkRecord.check_time) * 1000).toISOString() : defaultPunchTime,
+      punch_time: larkRecord?.check_time ? new Date(parseInt(larkRecord.check_time) * 1000).toISOString() : null,
       lark_record_id: larkRecord?.record_id || `VIRTUAL_${type}_${userTask.result_id}`,
       punch_type: type,
       day: day,

@@ -5,6 +5,8 @@ import { AttendancePunchRecord } from '../../entities/attendance-punch-record.en
 import { AttendanceDailyPunch } from '../../entities/attendance-daily-punch.entity';
 import { CalculationContext } from '../dto/calculation-context.dto';
 import { WorkMethodCode } from 'src/constants/work-method.enum';
+import { AttendanceTimeUtil } from '../utils/attendance-time.util';
+import { PunchResult } from '../constants/attendance-engine.constants';
 
 @Injectable()
 export class PunchProcessingStrategy {
@@ -72,8 +74,8 @@ export class PunchProcessingStrategy {
       missPunch.miss_check_in = true;
       missPunch.miss_check_out = true;
 
-      missPunch.check_in_result = 'Lack';
-      missPunch.check_out_result = 'Lack';
+      missPunch.check_in_result = PunchResult.LACK;
+      missPunch.check_out_result = PunchResult.LACK;
 
       context.punches = [missPunch];
 
@@ -95,7 +97,7 @@ export class PunchProcessingStrategy {
     );
 
     dailyPunch.miss_check_in = false;
-    dailyPunch.check_in_result = 'Normal';
+    dailyPunch.check_in_result = PunchResult.NORMAL;
 
     // ===== CHECK-OUT =====
     if (rawPunches.length >= 2) {
@@ -112,7 +114,7 @@ export class PunchProcessingStrategy {
 
       dailyPunch.check_out_time = null;
       dailyPunch.miss_check_out = true;
-      dailyPunch.check_out_result = 'Lack';
+      dailyPunch.check_out_result = PunchResult.LACK;
     }
 
     context.punches = [dailyPunch];
@@ -136,23 +138,16 @@ export class PunchProcessingStrategy {
     punch.miss_check_in = false;
     punch.miss_check_out = false;
 
-    punch.check_in_result = 'Normal';
-    punch.check_out_result = 'Normal';
+    punch.check_in_result = PunchResult.NORMAL;
+    punch.check_out_result = PunchResult.NORMAL;
 
     const rule = context.shiftContext?.rule;
 
     if (rule) {
       this.logger.debug(`Shift rule detected`);
 
-      const onTime =
-        rule.onTime instanceof Date
-          ? rule.onTime
-          : this.combineDateAndTime(context.date, rule.onTime);
-
-      const offTime =
-        rule.offTime instanceof Date
-          ? rule.offTime
-          : this.combineDateAndTime(context.date, rule.offTime);
+      const onTime = AttendanceTimeUtil.combine(context.date, rule.onTime);
+      const offTime = AttendanceTimeUtil.combine(context.date, rule.offTime);
 
       this.logger.debug(`Generated onTime: ${onTime}`);
       this.logger.debug(`Generated offTime: ${offTime}`);
@@ -163,17 +158,4 @@ export class PunchProcessingStrategy {
 
     return punch;
   }
-
-  private combineDateAndTime(date: Date, timeStr: string): Date {
-    const [hours, minutes] = timeStr.split(':').map(Number);
-
-    const dt = new Date(date);
-    dt.setHours(hours, minutes, 0, 0);
-
-    this.logger.debug(`combineDateAndTime ${timeStr} → ${dt.toISOString()}`);
-
-    return dt;
-  }
-
-
 }

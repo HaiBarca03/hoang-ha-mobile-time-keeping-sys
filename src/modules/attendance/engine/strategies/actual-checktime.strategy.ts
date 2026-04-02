@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CalculationContext } from '../dto/calculation-context.dto';
+import { AttendanceTimeUtil } from '../utils/attendance-time.util';
 
 @Injectable()
 export class ActualCheckTimeStrategy {
@@ -15,8 +16,9 @@ export class ActualCheckTimeStrategy {
       return;
     }
 
-    const shiftStart = context.shiftContext.rule.onTime;
-    const shiftEnd = context.shiftContext.rule.offTime;
+    const { onTime, offTime } = context.shiftContext.rule;
+    const shiftStart = AttendanceTimeUtil.combine(context.date, onTime);
+    const shiftEnd = AttendanceTimeUtil.combine(context.date, offTime);
 
     this.logger.debug(`Shift Start: ${shiftStart}`);
     this.logger.debug(`Shift End: ${shiftEnd}`);

@@ -36,6 +36,10 @@ export class CalculationContext {
   businessTripValue: number = 0;
   leaveHours: number = 0;
   leaveValue: number = 0;
+  leaveTypeCode?: string;
+  isUnpaidLeave: boolean = false;
+  otRatio: number = 1; // Hệ số OT mặc định
+  isInvalidWorkday: boolean = false;
   finalActualWorkday: number = 0;
   finalTotalWorkday: number = 1; // default 1 ngày
 

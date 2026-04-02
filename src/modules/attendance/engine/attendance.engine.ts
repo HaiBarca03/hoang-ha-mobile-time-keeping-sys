@@ -14,6 +14,14 @@ import { AttendanceDailyPunch } from '../entities/attendance-daily-punch.entity'
 import { Employee } from 'src/modules/master-data/entities/employee.entity';
 import { LeaveStrategy } from './strategies/leave.strategy';
 import { CorrectionStrategy } from './strategies/correction.strategy';
+import {
+  AttendanceStatus,
+  CACHE_TTL,
+  CALCULATION_VERSION,
+  MAX_CACHE_SIZE,
+  PunchResult,
+} from './constants/attendance-engine.constants';
+import { AttendanceTimeUtil } from './utils/attendance-time.util';
 
 @Injectable()
 export class AttendanceEngine {
@@ -146,7 +154,7 @@ export class AttendanceEngine {
     const now = Date.now();
     const cached = this.employeeCache.get(id);
 
-    // Cache valid for 10 minutes
+    // Cache valid for 10 minutes (600,000 ms)
     if (cached && cached.expireAt > now) {
       return cached.data;
     }
@@ -169,10 +177,10 @@ export class AttendanceEngine {
       throw new Error(`Employee with ID ${id} not found`);
     }
 
-    this.employeeCache.set(id, { data: employee, expireAt: now + 10 * 60 * 1000 });
+    this.employeeCache.set(id, { data: employee, expireAt: now + CACHE_TTL });
 
     // Prevent memory leak by cleaning up old keys occasionally
-    if (this.employeeCache.size > 1000) {
+    if (this.employeeCache.size > MAX_CACHE_SIZE) {
       for (const [key, value] of this.employeeCache.entries()) {
         if (value.expireAt <= Date.now()) {
           this.employeeCache.delete(key);
@@ -217,15 +225,15 @@ export class AttendanceEngine {
     timesheet.check_out_actual = primaryPunch?.check_out_time ?? null;
 
     timesheet.check_in_result = primaryPunch?.miss_check_in
-      ? 'Lack'
+      ? PunchResult.LACK
       : context.totalLateMinutes > 0
-        ? 'Late'
-        : 'InTime';
+        ? PunchResult.LATE
+        : PunchResult.IN_TIME;
     timesheet.check_out_result = primaryPunch?.miss_check_out
-      ? 'Lack'
+      ? PunchResult.LACK
       : context.totalEarlyMinutes > 0
-        ? 'Early'
-        : 'OutTime';
+        ? PunchResult.EARLY
+        : PunchResult.OUT_TIME;
 
     // --- 3. Chỉ số tính toán ---
     timesheet.late_minutes = context.totalLateMinutes;
@@ -239,19 +247,6 @@ export class AttendanceEngine {
 
     // Tính rest_minutes dựa trên thực tế trừ nghỉ (holidayTime trong BreakStrategy)
     timesheet.rest_minutes = context.holidayTime || 0;
-
-    // Logic Redundant cho Store
-    if (context.attendanceGroupCode === 'STORE_GROUP') {
-      const standardHours = timesheet.total_work_hours_standard;
-      if (context.totalWorkedHours > standardHours) {
-        timesheet.is_redundant = true;
-        timesheet.work_hours_redundant =
-          context.totalWorkedHours - standardHours;
-      } else {
-        timesheet.is_redundant = false;
-        timesheet.work_hours_redundant = 0;
-      }
-    }
 
     // --- 4. Trạng thái vi phạm & Đơn từ ---
     timesheet.missing_check_in = !!primaryPunch?.miss_check_in;
@@ -273,15 +268,16 @@ export class AttendanceEngine {
     timesheet.user_id = context.employee.userId;
     // Status dựa trên số công cuối cùng
     const currentWorkday = context.finalActualWorkday ?? 0;
-    if (currentWorkday >= 1) timesheet.attendance_status = 'Full';
-    else if (currentWorkday > 0) timesheet.attendance_status = 'Partial';
-    else timesheet.attendance_status = 'Lack';
+    if (currentWorkday >= 1) timesheet.attendance_status = AttendanceStatus.FULL;
+    else if (currentWorkday > 0)
+      timesheet.attendance_status = AttendanceStatus.PARTIAL;
+    else timesheet.attendance_status = AttendanceStatus.LACK;
 
     // --- 5. Lưu công cuối cùng vào trường chuyên dụng ---
     // (Adjustment_hours trả lại đúng vai trò là giờ điều chỉnh từ Admin/Phiếu điều chỉnh)
     timesheet.workday_count = currentWorkday;
 
-    timesheet.calculation_version = 'v1.0.0';
+    timesheet.calculation_version = CALCULATION_VERSION;
     timesheet.calculated_at = new Date();
     timesheet.is_recalculated = true;
 

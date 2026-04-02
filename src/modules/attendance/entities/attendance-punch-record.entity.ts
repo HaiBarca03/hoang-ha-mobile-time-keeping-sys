@@ -23,8 +23,8 @@ export class AttendancePunchRecord extends BaseEntity {
   @Column({ type: 'integer', nullable: true })
   day: number;
 
-  @Column({ type: 'datetime2' })
-  punch_time: Date;
+  @Column({ type: 'datetime2', nullable: true })
+  punch_time?: Date | null;
 
   @Column({ type: 'nvarchar', length: 'max', nullable: true })
   punch_type?: string | null;
@@ -61,7 +61,7 @@ export class AttendancePunchRecord extends BaseEntity {
 
   @Index()
   @Column({
-    type: 'varchar',
+    type: 'nvarchar',
     length: 20,
     default: 'PENDING'
   })
@@ -74,7 +74,7 @@ export class AttendancePunchRecord extends BaseEntity {
   retry_count: number;
 
   @Index()
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'nvarchar', nullable: true })
   job_id?: string | null;
 
   @Column({ type: 'datetime2', nullable: true })
