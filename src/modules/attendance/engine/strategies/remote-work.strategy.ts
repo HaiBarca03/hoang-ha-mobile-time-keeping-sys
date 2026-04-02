@@ -8,6 +8,7 @@ import {
 } from '../../../approval-management/entities/attendance-request.entity';
 import { RequestStatus } from 'src/constants/approval-status.constants';
 import { differenceInMinutes, isBefore, max, min } from 'date-fns';
+import { AttendanceTimeUtil } from '../utils/attendance-time.util';
 
 @Injectable()
 export class RemoteWorkStrategy {
@@ -37,8 +38,8 @@ export class RemoteWorkStrategy {
     const detail = request.detail_time_off;
 
     // SỬA: Đảm bảo truyền đúng kiểu string vào hàm combine
-    const shiftIn = this.combine(date, shiftContext.rule.onTime);
-    const shiftOut = this.combine(date, shiftContext.rule.offTime);
+    const shiftIn = AttendanceTimeUtil.combine(date, shiftContext.rule.onTime);
+    const shiftOut = AttendanceTimeUtil.combine(date, shiftContext.rule.offTime);
 
     const resStart = new Date(detail.start_time);
     const resEnd = new Date(detail.end_time);
@@ -59,8 +60,8 @@ export class RemoteWorkStrategy {
         // Kiểm tra an toàn cho restBeginTime và restEndTime
         if (!rule.restBeginTime || !rule.restEndTime) continue;
 
-        const restStart = this.combine(date, rule.restBeginTime);
-        const restEnd = this.combine(date, rule.restEndTime);
+        const restStart = AttendanceTimeUtil.combine(date, rule.restBeginTime);
+        const restEnd = AttendanceTimeUtil.combine(date, rule.restEndTime);
 
         const oRestStart = max([resStart, restStart]);
         const oRestEnd = min([resEnd, restEnd]);
@@ -76,22 +77,10 @@ export class RemoteWorkStrategy {
           ? remoteOverlapTime - restOverlapTime
           : 0;
 
-      context.onlineValue = finalMinutes / 60;
+      context.onlineValue = AttendanceTimeUtil.minutesToHours(finalMinutes);
       this.logger.debug(
         `Remote hours for ${employee.id}: ${context.onlineValue}`,
       );
     }
-  }
-
-  // SỬA: Đảm bảo timeStr là string và xử lý nếu nó là Date từ trước
-  private combine(date: Date, timeInput: any): Date {
-    const d = new Date(date);
-    if (timeInput instanceof Date) {
-      d.setHours(timeInput.getHours(), timeInput.getMinutes(), 0, 0);
-    } else if (typeof timeInput === 'string') {
-      const [h, m] = timeInput.split(':').map(Number);
-      d.setHours(h, m, 0, 0);
-    }
-    return d;
   }
 }

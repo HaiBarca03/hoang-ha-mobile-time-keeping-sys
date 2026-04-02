@@ -9,10 +9,10 @@ export class LeaveType extends BaseEntity {
   companyId: string;
 
   @Index()
-  @Column({ name: 'code', type: 'varchar', length: 50 })
+  @Column({ name: 'code', type: 'nvarchar', length: 50 })
   code: string;
 
-  @Column({ name: 'leave_type_name', type: 'varchar' })
+  @Column({ name: 'leave_type_name', type: 'nvarchar' })
   leaveTypeName: string;
 
   @Column({ name: 'is_deduct_leave', default: true })

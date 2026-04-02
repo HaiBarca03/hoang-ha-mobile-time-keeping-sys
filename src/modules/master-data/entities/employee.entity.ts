@@ -41,26 +41,26 @@ export class Employee extends BaseEntity {
   @Column({ name: 'work_location_id', type: 'bigint' })
   workLocationId: string;
 
-  @Index({ unique: true })
-  @Column({ name: 'origin_id', type: 'varchar', unique: true, nullable: true })
+  @Index({ unique: true, where: 'origin_id IS NOT NULL' })
+  @Column({ name: 'origin_id', type: 'nvarchar', nullable: true })
   originId: string;
 
-  @Column({ name: 'user_id', type: 'varchar' })
+  @Column({ name: 'user_id', type: 'nvarchar' })
   userId: string;
 
-  @Column({ name: 'user_name', type: 'varchar' })
+  @Column({ name: 'user_name', type: 'nvarchar' })
   userName: string;
 
-  @Column({ name: 'full_name', type: 'varchar' })
+  @Column({ name: 'full_name', type: 'nvarchar' })
   fullName: string;
 
-  @Column({ name: 'lark_id', type: 'varchar', nullable: true })
+  @Column({ name: 'lark_id', type: 'nvarchar', nullable: true })
   larkId: string;
 
-  @Column({ name: 'email', type: 'varchar', nullable: true })
+  @Column({ name: 'email', type: 'nvarchar', nullable: true })
   email: string;
 
-  @Column({ name: 'phone_number', type: 'varchar', nullable: true })
+  @Column({ name: 'phone_number', type: 'nvarchar', nullable: true })
   phoneNumber: string;
 
   @Column({ name: 'manager_id', type: 'bigint', nullable: true })
@@ -69,7 +69,7 @@ export class Employee extends BaseEntity {
   @Column({ name: 'birthday', type: 'date', nullable: true })
   birthday: Date;
 
-  @Column({ name: 'gender', type: 'varchar', length: 10, nullable: true })
+  @Column({ name: 'gender', type: 'nvarchar', length: 10, nullable: true })
   gender: string;
 
   @Column({ name: 'joined_at', type: 'date', nullable: true })

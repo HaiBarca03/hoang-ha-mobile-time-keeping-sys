@@ -47,7 +47,7 @@ export class AttendanceRequest extends BaseEntity {
   leave_type_id: string | null;
 
   @Column({
-    type: 'varchar',
+    type: 'nvarchar',
     length: 20,
   })
   type: RequestType;

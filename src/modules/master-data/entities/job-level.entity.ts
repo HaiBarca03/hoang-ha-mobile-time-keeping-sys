@@ -8,13 +8,13 @@ export class JobLevel extends BaseEntity {
   @Column({ name: 'company_id', type: 'bigint' })
   companyId: string;
 
-  @Column({ name: 'code', type: 'varchar', length: 50 })
+  @Column({ name: 'code', type: 'nvarchar', length: 50 })
   code: string;
 
-  @Column({ name: 'level_name', type: 'varchar' })
+  @Column({ name: 'level_name', type: 'nvarchar' })
   levelName: string;
 
-  @Column({ name: 'status', type: 'varchar', length: 20, default: 'ACTIVE' })
+  @Column({ name: 'status', type: 'nvarchar', length: 20, default: 'ACTIVE' })
   status: string;
 
   // --- Relationships ---

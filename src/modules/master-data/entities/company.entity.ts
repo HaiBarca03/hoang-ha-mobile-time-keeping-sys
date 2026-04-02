@@ -8,11 +8,11 @@ import { AttendanceDailyTimesheet } from '../../attendance/entities/attendance-d
 
 @Entity('companies')
 export class Company extends BaseEntity {
-  @Column({ name: 'company_name', type: 'varchar' })
+  @Column({ name: 'company_name', type: 'nvarchar' })
   companyName: string;
 
-  @Index({ unique: true })
-  @Column({ name: 'origin_id', type: 'varchar', unique: true, nullable: true })
+  @Index({ unique: true, where: 'origin_id IS NOT NULL' })
+  @Column({ name: 'origin_id', type: 'nvarchar', nullable: true })
   originId: string;
 
   // --- Relationships ---

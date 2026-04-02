@@ -72,6 +72,7 @@ export class AttendanceService {
         validEntities.push(this.punchRecordRepo.create({
           ...input,
           employee_id: employeeId,
+          punch_time: input.punch_time ? new Date(input.punch_time) : null,
         }));
       }
     }

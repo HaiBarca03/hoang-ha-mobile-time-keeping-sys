@@ -9,6 +9,7 @@ import {
 import { RequestStatus } from 'src/constants/approval-status.constants';
 import { differenceInMinutes, isBefore, max, min } from 'date-fns';
 import { OvertimeConversionCode } from 'src/constants/overtime-conversion.enum';
+import { AttendanceTimeUtil } from '../utils/attendance-time.util';
 
 @Injectable()
 export class OvertimeStrategy {
@@ -41,7 +42,7 @@ export class OvertimeStrategy {
     const detail = request.detail_overtime;
 
     // FIX 2: Truyền đúng biến vào hàm combine đã được sửa đổi bên dưới
-    const shiftOut = this.combine(date, shiftContext.rule.offTime);
+    const shiftOut = AttendanceTimeUtil.combine(date, shiftContext.rule.offTime);
     const checkOutRecord = punch.check_out_time;
     const resStart = new Date(detail.start_time);
     const resEnd = new Date(detail.end_time);
@@ -58,7 +59,7 @@ export class OvertimeStrategy {
     // 2. Tổng thời gian ghi nhận = ot_overlap_time (nếu > 0)
     if (otOverlapTime > 0) {
       context.overtimeMinutes = otOverlapTime;
-      context['ot_ratio'] = detail.ratio_convert;
+      context.otRatio = detail.ratio_convert;
 
       if (detail.convert_type === OvertimeConversionCode.COMPENSATORY_LEAVE) {
         context.overtimeCompensatoryMinutes = otOverlapTime;
@@ -68,17 +69,5 @@ export class OvertimeStrategy {
         `OT Minutes detected: ${otOverlapTime} for employee ${employee.id}`,
       );
     }
-  }
-
-  // FIX 4: Sửa hàm combine để nhận cả string lẫn Date
-  private combine(date: Date, timeInput: any): Date {
-    const d = new Date(date);
-    if (timeInput instanceof Date) {
-      d.setHours(timeInput.getHours(), timeInput.getMinutes(), 0, 0);
-    } else if (typeof timeInput === 'string') {
-      const [h, m] = timeInput.split(':').map(Number);
-      d.setHours(h, m, 0, 0);
-    }
-    return d;
   }
 }

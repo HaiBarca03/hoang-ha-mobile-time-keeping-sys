@@ -12,10 +12,10 @@ export class AttendanceMonthlyTimesheet extends BaseEntity {
   @Column({ type: 'bigint' })
   employee_id: string;
 
-  @Column({ type: 'varchar' })
+  @Column({ type: 'nvarchar' })
   user_id: string;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'nvarchar', nullable: true })
   department_code: string;
 
   @Column()

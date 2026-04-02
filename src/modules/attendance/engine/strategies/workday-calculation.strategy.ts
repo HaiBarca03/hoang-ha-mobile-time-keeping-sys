@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CalculationContext } from '../dto/calculation-context.dto';
 import { differenceInMinutes, max, min, isBefore } from 'date-fns';
+import { AttendanceTimeUtil } from '../utils/attendance-time.util';
 
 @Injectable()
 export class WorkdayCalculationStrategy {
@@ -30,8 +31,8 @@ export class WorkdayCalculationStrategy {
         for (const rest of shiftContext.restRules) {
           if (!rest.restBeginTime || !rest.restEndTime) continue;
 
-          const restStart = this.combine(date, rest.restBeginTime);
-          const restEnd = this.combine(date, rest.restEndTime);
+          const restStart = AttendanceTimeUtil.combine(date, rest.restBeginTime);
+          const restEnd = AttendanceTimeUtil.combine(date, rest.restEndTime);
 
           const overlapStart = max([checkIn, restStart]);
           const overlapEnd = min([checkOut, restEnd]);
@@ -53,7 +54,9 @@ export class WorkdayCalculationStrategy {
       }
     }
 
-    context.totalWorkedHours = totalActualWorkMinutes / 60;
+    context.totalWorkedHours = AttendanceTimeUtil.minutesToHours(
+      totalActualWorkMinutes,
+    );
 
     // 2. LOGIC: CÔNG THỰC TẾ GHI NHẬN (workedWorkday)
     // Công thực tế ghi nhận = Tổng giờ làm việc thực tế / Số giờ làm việc theo ca
@@ -76,22 +79,11 @@ export class WorkdayCalculationStrategy {
     if (totalFinalWorkday > 1) totalFinalWorkday = 1;
     if (totalFinalWorkday < 0) totalFinalWorkday = 0;
 
-    context.finalActualWorkday = Math.round(totalFinalWorkday * 100) / 100;
+    context.finalActualWorkday = AttendanceTimeUtil.roundTo(totalFinalWorkday);
 
     this.logger.debug(
       `[CALC] ID: ${context.employee.id} | RealWork: ${workedWorkday.toFixed(2)} | ` +
         `Leave: ${leaveContribution} | Remote: ${remoteContribution} | Final: ${context.finalActualWorkday}`,
     );
-  }
-
-  private combine(date: Date, timeInput: any): Date {
-    const d = new Date(date);
-    if (timeInput instanceof Date) {
-      d.setHours(timeInput.getHours(), timeInput.getMinutes(), 0, 0);
-    } else if (typeof timeInput === 'string') {
-      const [h, m] = timeInput.split(':').map(Number);
-      d.setHours(h, m, 0, 0);
-    }
-    return d;
   }
 }

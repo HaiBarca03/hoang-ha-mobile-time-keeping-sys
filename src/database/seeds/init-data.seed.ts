@@ -24,16 +24,17 @@ export const initDataSeed = async (dataSource: DataSource) => {
 
   if (isMssql) {
     await dataSource.query('EXEC sp_MSforeachtable "ALTER TABLE ? NOCHECK CONSTRAINT ALL"');
+
     for (const entity of dataSource.entityMetadatas) {
       await dataSource.query(`DELETE FROM "${entity.tableName}"`);
+
       try {
-        await dataSource.query(`DBCC CHECKIDENT ("${entity.tableName}", RESEED, 0)`);
+        await dataSource.query(`DBCC CHECKIDENT ("${entity.tableName}", RESEED, -1)`);
       } catch (e) {
       }
     }
     await dataSource.query('EXEC sp_MSforeachtable "ALTER TABLE ? CHECK CONSTRAINT ALL"');
   } else {
-    // Original PostgreSQL logic
     const tables = dataSource.entityMetadatas
       .map((e) => `"${e.tableName}"`)
       .join(', ');
@@ -43,6 +44,14 @@ export const initDataSeed = async (dataSource: DataSource) => {
   const companyRepo = dataSource.getRepository(Company);
 
   // 1. Công ty Staaar
+  const company2 = await companyRepo.save({
+    originId: 'LMONNKZO7X1',
+    companyName: 'Hoàng Hà Mobile2',
+    taxCode: '0109876543',
+    address: 'Địa chỉ của Hoàng Hà Mobile2',
+    status: 'ACTIVE',
+  });
+
   const company1 = await companyRepo.save({
     originId: 'LMONNKZO7X5',
     companyName: 'Hoàng Hà Mobile',
@@ -52,8 +61,10 @@ export const initDataSeed = async (dataSource: DataSource) => {
   });
   const companyId = company1.id;
 
+
   const jobLevels = await dataSource.getRepository(JobLevel).save([
     { companyId, code: 'STAFF', levelName: 'Nhân viên', status: 'ACTIVE' },
+    { companyId, code: 'STAFF_IT', levelName: 'Nhân viên IT', status: 'ACTIVE' },
     {
       companyId,
       code: 'TEAM_LEAD',

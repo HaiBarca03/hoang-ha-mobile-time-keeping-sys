@@ -34,7 +34,7 @@ export class AttendanceDailyTimesheet extends BaseEntity {
   year: number;
 
   @Column({
-    type: 'varchar',
+    type: 'nvarchar',
     nullable: true,
   })
   shift_id?: string | null;
@@ -51,10 +51,10 @@ export class AttendanceDailyTimesheet extends BaseEntity {
   @Column({ type: 'datetime2', nullable: true })
   check_out_actual: Date | null;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'nvarchar', nullable: true })
   check_in_result?: string | null;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'nvarchar', nullable: true })
   check_out_result?: string | null;
 
   @Column({ default: 0 })
@@ -123,7 +123,7 @@ export class AttendanceDailyTimesheet extends BaseEntity {
   @Column({ default: 'Lack' })
   attendance_status: string;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'nvarchar', nullable: true })
   calculation_version?: string | null;
 
   @Column({ type: 'datetime2', nullable: true })
@@ -138,10 +138,10 @@ export class AttendanceDailyTimesheet extends BaseEntity {
   @Column({ default: false })
   is_saturday_candidate: boolean;
 
-  @Column({ type: 'varchar' })
+  @Column({ type: 'nvarchar' })
   user_id: string;
 
-  @Column({ type: 'varchar' })
+  @Column({ type: 'nvarchar' })
   department_code: string;
 
   @ManyToOne(() => Company, (company) => company.attendanceTimesheets)

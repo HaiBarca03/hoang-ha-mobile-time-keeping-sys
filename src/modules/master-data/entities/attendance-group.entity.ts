@@ -18,17 +18,17 @@ export class AttendanceGroup extends BaseEntity {
   @Column({ name: 'company_id', type: 'bigint' })
   companyId: string;
 
-  @Index({ unique: true })
-  @Column({ name: 'origin_id', type: 'varchar', unique: true, nullable: true })
+  @Index({ unique: true, where: 'origin_id IS NOT NULL' })
+  @Column({ name: 'origin_id', type: 'nvarchar', nullable: true })
   originId: string;
 
-  @Column({ name: 'code', type: 'varchar', length: 50 })
+  @Column({ name: 'code', type: 'nvarchar', length: 50 })
   code: string; // 'OFFICE_GROUP', 'FACTORY_GROUP', ...
 
-  @Column({ name: 'group_name', type: 'varchar' })
+  @Column({ name: 'group_name', type: 'nvarchar' })
   groupName: string;
 
-  @Column({ name: 'status', type: 'varchar', length: 20, default: 'ACTIVE' })
+  @Column({ name: 'status', type: 'nvarchar', length: 20, default: 'ACTIVE' })
   status: string;
 
   @Column({ name: 'default_shift_id', type: 'bigint', nullable: true })

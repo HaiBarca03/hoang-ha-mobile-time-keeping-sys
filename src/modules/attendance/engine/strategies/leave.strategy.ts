@@ -8,6 +8,7 @@ import {
 } from '../../../approval-management/entities/attendance-request.entity';
 import { RequestStatus } from 'src/constants/approval-status.constants';
 import { differenceInMinutes, isBefore, max, min } from 'date-fns';
+import { AttendanceTimeUtil } from '../utils/attendance-time.util';
 
 @Injectable()
 export class LeaveStrategy {
@@ -36,8 +37,11 @@ export class LeaveStrategy {
     let totalLeaveMinutes = 0;
 
     if (leaveRequests && leaveRequests.length > 0) {
-      const shiftIn = this.combine(date, shiftContext.rule.onTime);
-      const shiftOut = this.combine(date, shiftContext.rule.offTime);
+      const shiftIn = AttendanceTimeUtil.combine(date, shiftContext.rule.onTime);
+      const shiftOut = AttendanceTimeUtil.combine(
+        date,
+        shiftContext.rule.offTime,
+      );
 
       for (const req of leaveRequests) {
         const detail = req.detail_time_off;
@@ -59,8 +63,8 @@ export class LeaveStrategy {
           // --- Logic: rest_overlap_time (Trừ giờ nghỉ trưa nằm trong khoảng xin nghỉ) ---
           let restOverlapTime = 0;
           for (const rule of shiftContext.restRules) {
-            const restStart = this.combine(date, rule.restBeginTime);
-            const restEnd = this.combine(date, rule.restEndTime);
+            const restStart = AttendanceTimeUtil.combine(date, rule.restBeginTime);
+            const restEnd = AttendanceTimeUtil.combine(date, rule.restEndTime);
 
             const oRestStart = max([resStart, restStart]);
             const oRestEnd = min([resEnd, restEnd]);
@@ -78,7 +82,7 @@ export class LeaveStrategy {
           totalLeaveMinutes += finalMinutes;
 
           // Lưu loại phép chính để hiển thị (nếu cần)
-          context['leaveTypeCode'] = req.leave_type?.code;
+          context.leaveTypeCode = req.leave_type?.code;
         }
       }
     }
@@ -94,33 +98,23 @@ export class LeaveStrategy {
 
       const shiftMinutes = shiftContext.getStandardWorkHours() * 60;
       // Ghi nhận số giờ nghỉ không phép (Bằng đúng số giờ làm việc chuẩn của ca)
-      context.leaveHours = shiftMinutes / 60;
+      context.leaveHours = AttendanceTimeUtil.minutesToHours(shiftMinutes);
       context.leaveValue = 0; // Nghỉ không phép thì 0 công
-      context['isUnpaidLeave'] = true;
+      context.isUnpaidLeave = true;
     } else {
       // Ghi nhận số giờ nghỉ có phép đã tính được
-      context.leaveHours = totalLeaveMinutes / 60;
+      context.leaveHours = AttendanceTimeUtil.minutesToHours(totalLeaveMinutes);
 
       // Tính leaveValue (công nghỉ) dựa trên cấu hình loại phép (tùy thuộc vào business của bạn có trả lương hay không)
       // Ở đây tạm tính theo tỷ lệ:
       const standardMinutes = shiftContext.getStandardWorkHours() * 60;
-      context.leaveValue =
-        Math.round((totalLeaveMinutes / standardMinutes) * 100) / 100;
+      context.leaveValue = AttendanceTimeUtil.roundTo(
+        totalLeaveMinutes / standardMinutes,
+      );
     }
 
     this.logger.debug(
       `Leave Result: ${context.leaveHours}h, Value: ${context.leaveValue}`,
     );
-  }
-
-  private combine(date: Date, timeInput: any): Date {
-    const d = new Date(date);
-    if (timeInput instanceof Date) {
-      d.setHours(timeInput.getHours(), timeInput.getMinutes(), 0, 0);
-    } else if (typeof timeInput === 'string') {
-      const [h, m] = timeInput.split(':').map(Number);
-      d.setHours(h, m, 0, 0);
-    }
-    return d;
   }
 }

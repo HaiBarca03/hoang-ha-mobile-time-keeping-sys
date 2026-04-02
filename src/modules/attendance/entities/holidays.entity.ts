@@ -3,21 +3,21 @@ import { Column, Entity } from "typeorm";
 
 @Entity('holidays')
 export class Holiday extends BaseEntity {
-  @Column({ type: 'varchar' })
+  @Column({ type: 'nvarchar' })
   holiday_name: string;
 
   @Column({ type: 'date' })
   holiday_date: Date;
 
   @Column({
-    type: 'varchar',
+    type: 'nvarchar',
     length: 20,
     default: 'PUBLIC'
   })
-  holiday_type: string; 
+  holiday_type: string;
 
   @Column({ type: 'decimal', precision: 3, scale: 2, default: 1.0 })
-  workday_value: number; 
+  workday_value: number;
 
   @Column({ default: true })
   is_active: boolean;

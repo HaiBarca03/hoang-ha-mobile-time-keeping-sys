@@ -8,10 +8,10 @@ export class AttendanceMethod extends BaseEntity {
   @Column({ name: 'company_id', type: 'bigint' })
   companyId: string;
 
-  @Column({ name: 'code', type: 'varchar', length: 50 })
+  @Column({ name: 'code', type: 'nvarchar', length: 50 })
   code: string;
 
-  @Column({ name: 'method_name', type: 'varchar' })
+  @Column({ name: 'method_name', type: 'nvarchar' })
   methodName: string;
 
   // --- Relationships ---
