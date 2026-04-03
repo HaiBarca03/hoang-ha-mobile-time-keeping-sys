@@ -72,8 +72,11 @@ export class WorkdayCalculationStrategy {
     const leaveContribution = context.leaveValue || 0;
     const remoteContribution = context.onlineValue || 0;
 
+    // Nếu đã đạt công ngày tối đa (1), không cộng remoteContribution để tránh tính thừa
+    const effectiveRemote = workedWorkday >= 1 ? 0 : remoteContribution;
+
     let totalFinalWorkday =
-      workedWorkday + leaveContribution + remoteContribution;
+      workedWorkday + leaveContribution + effectiveRemote;
 
     // Giới hạn trong khoảng [0, 1] và làm tròn 2 chữ số thập phân
     if (totalFinalWorkday > 1) totalFinalWorkday = 1;
@@ -83,7 +86,7 @@ export class WorkdayCalculationStrategy {
 
     this.logger.debug(
       `[CALC] ID: ${context.employee.id} | RealWork: ${workedWorkday.toFixed(2)} | ` +
-        `Leave: ${leaveContribution} | Remote: ${remoteContribution} | Final: ${context.finalActualWorkday}`,
+      `Leave: ${leaveContribution} | Remote: ${remoteContribution} | Final: ${context.finalActualWorkday}`,
     );
   }
 }

@@ -20,6 +20,7 @@ export class TypeOrmConfigService implements TypeOrmOptionsFactory {
       options: {
         encrypt: isSsl,
         trustServerCertificate,
+        useUTC: true,
       },
       extra: {
         max: process.env.DATABASE_MAX_CONNECTIONS
