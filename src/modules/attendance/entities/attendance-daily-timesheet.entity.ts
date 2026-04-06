@@ -102,11 +102,17 @@ export class AttendanceDailyTimesheet extends BaseEntity {
   @Column({ type: 'decimal', precision: 6, scale: 2, default: 0 })
   remote_hours: number;
 
+  @Column({ type: 'decimal', precision: 6, scale: 2, default: 0 })
+  reomte_work_day: number;
+
   @Column({ default: false })
   is_ot: boolean;
 
   @Column({ type: 'decimal', precision: 6, scale: 2, default: 0 })
   ot_hours: number;
+
+  @Column({ type: 'decimal', precision: 6, scale: 2, default: 0 })
+  ot_work_day: number;
 
   @Column({ default: false })
   is_holiday: boolean;
@@ -119,6 +125,9 @@ export class AttendanceDailyTimesheet extends BaseEntity {
 
   @Column({ type: 'decimal', precision: 6, scale: 2, default: 0 })
   adjustment_hours: number;
+
+  @Column({ type: 'decimal', precision: 6, scale: 2, default: 0 })
+  adjustment_work_day: number;
 
   @Column({ type: 'decimal', precision: 6, scale: 2, default: 0 })
   workday_count: number;

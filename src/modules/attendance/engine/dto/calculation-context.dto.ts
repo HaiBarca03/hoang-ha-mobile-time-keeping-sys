@@ -40,6 +40,7 @@ export class CalculationContext {
   isUnpaidLeave: boolean = false;
   otRatio: number = 1; // Hệ số OT mặc định
   isInvalidWorkday: boolean = false;
+  adjustmentHours: number = 0;
   finalActualWorkday: number = 0;
   finalTotalWorkday: number = 1; // default 1 ngày
 
