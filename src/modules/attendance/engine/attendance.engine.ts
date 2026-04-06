@@ -257,6 +257,8 @@ export class AttendanceEngine {
     // Nghỉ phép
     timesheet.is_leave = (context.leaveHours ?? 0) > 0;
     timesheet.leave_hours = context.leaveHours ?? 0;
+    const standardHours = timesheet.total_work_hours_standard || 8;
+    timesheet.leave_work_day = timesheet.leave_hours / standardHours;
 
     // Remote (SỬA LỖI: onlineValue bản chất đã là GIỜ, không cần nhân thêm gì cả)
     timesheet.is_remote = context.onlineValue + context.businessTripValue > 0;
