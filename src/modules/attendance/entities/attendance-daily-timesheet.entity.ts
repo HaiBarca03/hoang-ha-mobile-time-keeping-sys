@@ -93,6 +93,9 @@ export class AttendanceDailyTimesheet extends BaseEntity {
   @Column({ type: 'decimal', precision: 6, scale: 2, default: 0 })
   leave_hours: number;
 
+  @Column({ type: 'decimal', precision: 6, scale: 2, default: 0 })
+  leave_work_day: number;
+
   @Column({ default: false })
   is_remote: boolean;
 
