@@ -244,6 +244,7 @@ export class AttendanceEngine {
     timesheet.actual_work_hours = context.totalWorkedHours;
     timesheet.total_work_hours_standard =
       context.shiftContext?.getStandardWorkHours() || 8;
+    const standardHours = timesheet.total_work_hours_standard || 8;
 
     // Tính rest_minutes dựa trên thực tế trừ nghỉ (holidayTime trong BreakStrategy)
     timesheet.rest_minutes = context.holidayTime || 0;
@@ -257,16 +258,17 @@ export class AttendanceEngine {
     // Nghỉ phép
     timesheet.is_leave = (context.leaveHours ?? 0) > 0;
     timesheet.leave_hours = context.leaveHours ?? 0;
-    const standardHours = timesheet.total_work_hours_standard || 8;
     timesheet.leave_work_day = timesheet.leave_hours / standardHours;
 
     // Remote (SỬA LỖI: onlineValue bản chất đã là GIỜ, không cần nhân thêm gì cả)
     timesheet.is_remote = context.onlineValue + context.businessTripValue > 0;
     timesheet.remote_hours = context.onlineValue + context.businessTripValue;
+    timesheet.reomte_work_day = timesheet.remote_hours / standardHours;
 
     // OT
     timesheet.is_ot = (context.overtimeMinutes ?? 0) > 0;
     timesheet.ot_hours = (context.overtimeMinutes ?? 0) / 60;
+    timesheet.ot_work_day = timesheet.ot_hours / standardHours;
     timesheet.user_id = context.employee.userId;
     // Status dựa trên số công cuối cùng
     const currentWorkday = context.finalActualWorkday ?? 0;
@@ -277,6 +279,8 @@ export class AttendanceEngine {
 
     // --- 5. Lưu công cuối cùng vào trường chuyên dụng ---
     // (Adjustment_hours trả lại đúng vai trò là giờ điều chỉnh từ Admin/Phiếu điều chỉnh)
+    timesheet.adjustment_hours = context.adjustmentHours ?? 0;
+    timesheet.adjustment_work_day = timesheet.adjustment_hours / standardHours;
     timesheet.workday_count = currentWorkday;
 
     timesheet.calculation_version = CALCULATION_VERSION;

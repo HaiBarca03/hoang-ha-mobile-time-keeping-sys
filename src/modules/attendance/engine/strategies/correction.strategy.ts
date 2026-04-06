@@ -21,8 +21,6 @@ export class CorrectionStrategy {
     const { employee, date, punches } = context;
     const punch = punches[0]; // Thường xử lý cặp vào-ra đầu tiên
 
-    if (!punch) return;
-
     // 1. Tìm các đơn điều chỉnh công (CORRECTION) đã được duyệt cho ngày này
     const correctionRequests = await this.requestRepo.find({
       where: {
@@ -40,15 +38,20 @@ export class CorrectionStrategy {
       `Found ${correctionRequests.length} correction requests for employee ${employee.id}`,
     );
 
+    let totalAdjustmentHours = 0;
+
     for (const req of correctionRequests) {
+      // Cộng dồn giờ điều chỉnh từ tất cả phiếu CORRECTION được duyệt
+      if (req.total_hours) {
+        totalAdjustmentHours += req.total_hours;
+      }
+
       const detail = req.detail_adjustment;
       if (!detail || !detail.replenishment_time) continue;
 
-      // Logic: Nếu phiếu là Check-in -> Ghi đè vào check_in_time
-      // Dựa trên metadata hoặc field trong detail (Giả sử bạn dùng raw_data hoặc một field phân biệt)
-      // Ở đây mình check dựa trên nội dung đơn hoặc logic của bạn:
-
       const adjustmentType = req.raw_data?.adjustment_type; // "Check-in" hoặc "Check-out"
+
+      if (!punch) continue; // Chỉ patch punch nếu có dữ liệu quẹt thẻ
 
       if (adjustmentType === 'Check-in') {
         this.logger.debug(
@@ -66,5 +69,11 @@ export class CorrectionStrategy {
         punch.check_out_result = 'Normal';
       }
     }
+
+    // Gán tổng giờ điều chỉnh vào context (engine sẽ lưu vào adjustment_hours)
+    context.adjustmentHours = totalAdjustmentHours;
+    this.logger.debug(
+      `Total adjustment hours for employee ${employee.id}: ${totalAdjustmentHours}h`,
+    );
   }
 }
