@@ -26,7 +26,6 @@ import { HealthController } from './health.controller';
       provide: APP_GUARD,
       useClass: ApiKeyGuard,
     },
-    // Logger,
   ],
 })
 export class AppModule { }

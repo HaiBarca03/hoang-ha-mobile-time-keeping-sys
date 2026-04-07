@@ -180,8 +180,8 @@ export class AttendanceService {
     const punchDays = await this.punchRecordRepo
       .createQueryBuilder('punch')
       .select('punch.day')
-      .where('punch.company_id = :companyId', { companyId })
-      .andWhere('punch.employee_id = :employeeId', { employeeId })
+      .where('punch.company_id = :companyId', { companyId: String(companyId) })
+      .andWhere('punch.employee_id = :employeeId', { employeeId: String(employeeId) })
       .distinct(true)
       .getRawMany();
 

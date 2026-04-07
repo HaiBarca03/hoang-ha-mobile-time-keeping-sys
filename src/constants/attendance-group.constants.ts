@@ -1,0 +1,4 @@
+export const ATTENDANCE_GROUPS = {
+  STORE_GROUP_1: 'STORE_GROUP_1',
+  OFFICE_GROUP_1: 'OFFICE_GROUP_1',
+} as const;
