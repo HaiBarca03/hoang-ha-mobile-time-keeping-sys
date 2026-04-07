@@ -11,6 +11,8 @@ import { differenceInMinutes, isBefore, max, min } from 'date-fns';
 import { OvertimeConversionCode } from 'src/constants/overtime-conversion.enum';
 import { AttendanceTimeUtil } from '../utils/attendance-time.util';
 
+import { ATTENDANCE_GROUPS } from 'src/constants/attendance-group.constants';
+
 @Injectable()
 export class OvertimeStrategy {
   private readonly logger = new Logger(OvertimeStrategy.name);
@@ -52,9 +54,18 @@ export class OvertimeStrategy {
     const otOverlapStart = max([resStart, shiftOut]);
     const otOverlapEnd = min([resEnd, checkOutRecord]);
 
-    const otOverlapTime = isBefore(otOverlapStart, otOverlapEnd)
+    let otOverlapTime = isBefore(otOverlapStart, otOverlapEnd)
       ? differenceInMinutes(otOverlapEnd, otOverlapStart)
       : 0;
+
+    // Quy tắc riêng cho nhóm STORE_GROUP_1
+    if (context.attendanceGroupCode === ATTENDANCE_GROUPS.STORE_GROUP_1) {
+      const extraMinutes = differenceInMinutes(checkOutRecord, shiftOut);
+      // Nếu (thời gian check-out thực tế - thời gian cần check-out) <= 60 phút (1 tiếng) thì không được tính OT
+      if (extraMinutes <= 60) {
+        otOverlapTime = 0;
+      }
+    }
 
     // 2. Tổng thời gian ghi nhận = ot_overlap_time (nếu > 0)
     if (otOverlapTime > 0) {
@@ -71,3 +82,4 @@ export class OvertimeStrategy {
     }
   }
 }
+
