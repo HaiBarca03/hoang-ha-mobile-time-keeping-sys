@@ -143,9 +143,9 @@ export class MasterDataService {
     };
   }
 
-  async findOneEmployee(id: string) {
+  async findOneEmployee(userId: string) {
     const employee = await this.employeeRepository.findOne({
-      where: { id },
+      where: { userId: userId },
       relations: [
         'employeeStatus',
         'company',
@@ -489,8 +489,8 @@ export class MasterDataService {
     return cleaned;
   }
 
-  async updateEmployee(id: string, dto: UpdateEmployeeDto) {
-    const employee = await this.findOneEmployee(id);
+  async updateEmployee(userId: string, dto: UpdateEmployeeDto) {
+    const employee = await this.findOneEmployee(userId);
 
     const relations = await this.resolveOriginIds(dto);
     const cleanedDto = this.cleanData(dto);

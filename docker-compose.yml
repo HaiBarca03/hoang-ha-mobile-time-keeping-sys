@@ -2,21 +2,21 @@ version: '3.8'
 
 services:
   migration:
-    image: timekeeping-migration:latest
+    image: hhm-time-attendance-migration:latest
     build:
       context: .
       target: builder
-    container_name: timekeeping-migration
+    container_name: hhm-time-attendance-migration
     env_file: 
       - .env
     command: yarn migration:run
 
   api-app:
-    image: timekeeping-api:latest
+    image: hhm-time-attendance-api:latest
     build:
       context: .
       target: runner
-    container_name: timekeeping-api
+    container_name: hhm-time-attendance-api
     restart: always
     env_file: 
       - .env

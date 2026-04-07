@@ -160,11 +160,6 @@ export class CreateEmployeeDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  leavePolicyOriginId?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
   managerOriginId?: string;
 
   @ApiProperty({

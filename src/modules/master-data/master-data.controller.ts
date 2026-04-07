@@ -111,10 +111,10 @@ export class MasterDataController {
     description: 'Không tìm thấy nhân viên',
   })
   async updateEmployee(
-    @Param('id') id: string,
+    @Param('id') userId: string,
     @Body() updateEmployeeDto: UpdateEmployeeDto,
   ) {
-    return this.masterDataService.updateEmployee(id, updateEmployeeDto);
+    return this.masterDataService.updateEmployee(userId, updateEmployeeDto);
   }
   @Post('employees/bulk-update')
   @ApiOperation({
