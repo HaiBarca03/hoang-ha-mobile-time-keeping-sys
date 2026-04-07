@@ -36,4 +36,32 @@ export class AttendanceTimeUtil {
   static getDiffMinutes(target: Date, base: Date): number {
     return differenceInMinutes(target, base);
   }
+
+  /**
+   * Định dạng Date thành chuỗi yyyy-MM-dd
+   */
+  static formatDate(date: Date): string {
+    const d = new Date(date);
+    const month = '' + (d.getMonth() + 1);
+    const day = '' + d.getDate();
+    const year = d.getFullYear();
+
+    return [year, month.padStart(2, '0'), day.padStart(2, '0')].join('-');
+  }
+
+  /**
+   * Định dạng thời gian sang kiểu Việt Nam (UTC+7)
+   */
+  static formatTimeToVietnam(date?: Date | string | null): string {
+    if (!date) return '--';
+
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '--';
+
+    const hours = d.getUTCHours() + 7;
+    const finalHours = hours >= 24 ? hours - 24 : hours;
+    const minutes = d.getUTCMinutes();
+
+    return `${finalHours}h${minutes.toString().padStart(2, '0')}`;
+  }
 }

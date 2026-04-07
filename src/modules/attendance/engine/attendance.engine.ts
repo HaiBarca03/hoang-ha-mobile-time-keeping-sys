@@ -263,7 +263,7 @@ export class AttendanceEngine {
     // Remote (SỬA LỖI: onlineValue bản chất đã là GIỜ, không cần nhân thêm gì cả)
     timesheet.is_remote = context.onlineValue + context.businessTripValue > 0;
     timesheet.remote_hours = context.onlineValue + context.businessTripValue;
-    timesheet.reomte_work_day = timesheet.remote_hours / standardHours;
+    timesheet.remote_work_day = timesheet.remote_hours / standardHours;
 
     // OT
     timesheet.is_ot = (context.overtimeMinutes ?? 0) > 0;
