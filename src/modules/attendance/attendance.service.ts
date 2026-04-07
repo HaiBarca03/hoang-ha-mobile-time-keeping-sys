@@ -8,6 +8,7 @@ import { Employee } from '../master-data/entities/employee.entity';
 import { AttendanceMonthlyTimesheet } from './entities/attendance-monthly-timesheet.entity';
 import { RawPunchInputDto } from './engine/dto/raw-punch.input';
 import { BatchPunchResultDto } from './dto/batch-punch-result.dto';
+import { AttendanceTimeUtil } from './engine/utils/attendance-time.util';
 
 @Injectable()
 export class AttendanceService {
@@ -136,7 +137,7 @@ export class AttendanceService {
       date.setDate(date.getDate() - 1);
     }
 
-    const dateOnly = this.formatDate(date);
+    const dateOnly = AttendanceTimeUtil.formatDate(date);
     this.logger.log(
       `[Batch Calc] Starting calculation for company ${companyId} on date ${dateOnly}`,
     );
@@ -155,17 +156,24 @@ export class AttendanceService {
       failed: 0,
     };
 
-    // 2. Lặp và tính toán
-    for (const emp of employees) {
-      try {
-        await this.attendanceEngine.calculateDailyForEmployee(emp.id, date);
-        results.success++;
-      } catch (error) {
-        this.logger.error(
-          `Failed to calculate for employee ${emp.id}: ${error.message}`,
-        );
-        results.failed++;
-      }
+    // 2. Chạy song song theo cụm (Chunking) để tối ưu hiệu năng
+    const CHUNK_SIZE = 10;
+    for (let i = 0; i < employees.length; i += CHUNK_SIZE) {
+      const chunk = employees.slice(i, i + CHUNK_SIZE);
+      await Promise.all(
+        chunk.map(async (emp) => {
+          try {
+            await this.attendanceEngine.calculateDailyForEmployee(emp.id, date);
+            results.success++;
+          } catch (error) {
+            this.logger.error(
+              `Failed to calculate for employee ${emp.id}: ${error.message}`,
+            );
+            results.failed++;
+          }
+        }),
+      );
+      this.logger.debug(`Processed chunk ${i / CHUNK_SIZE + 1}/${Math.ceil(employees.length / CHUNK_SIZE)}`);
     }
 
     this.logger.log(`[Batch Calc] Finished: ${results.success} success, ${results.failed} failed.`);
@@ -202,36 +210,43 @@ export class AttendanceService {
       details: [],
     };
 
-    // 2. Lặp qua từng ngày để tính toán
-    for (const record of punchDays) {
-      const dateStr = record.punch_day.toString(); // Giả sử format 20260325
-      const year = parseInt(dateStr.substring(0, 4));
-      const month = parseInt(dateStr.substring(4, 6)) - 1;
-      const day = parseInt(dateStr.substring(6, 8));
-      const calcDate = new Date(year, month, day);
+    // 2. Lặp qua từng ngày để tính toán theo cụm (Chunking)
+    const CHUNK_SIZE = 5; // Tính song song 5 ngày một lúc cho 1 nhân viên
+    for (let i = 0; i < punchDays.length; i += CHUNK_SIZE) {
+      const chunk = punchDays.slice(i, i + CHUNK_SIZE);
+      await Promise.all(
+        chunk.map(async (record) => {
+          const dateStr = record.punch_day.toString(); // Giả sử format 20260325
+          const year = parseInt(dateStr.substring(0, 4));
+          const month = parseInt(dateStr.substring(4, 6)) - 1;
+          const day = parseInt(dateStr.substring(6, 8));
+          const calcDate = new Date(year, month, day);
 
-      try {
-        // Gọi Engine để tính toán. 
-        // LƯU Ý: Nếu hàm calculateDailyForEmployee của bạn có logic UPDATE DB, 
-        // bạn nên cân nhắc tạo một hàm riêng trong Engine chỉ để return kết quả (dry-run).
-        const dailyResult = await this.attendanceEngine.calculateDailyForEmployee(employeeId, calcDate);
+          try {
+            const dailyResult = await this.attendanceEngine.calculateDailyForEmployee(
+              employeeId,
+              calcDate,
+            );
 
-        results.details.push({
-          date: this.formatDate(calcDate),
-          status: 'Success',
-          result: dailyResult // Kết quả trả về từ engine
-        });
-      } catch (error) {
-        results.details.push({
-          date: this.formatDate(calcDate),
-          status: 'Failed',
-          error: error.message
-        });
-      }
+            results.details.push({
+              date: AttendanceTimeUtil.formatDate(calcDate),
+              status: 'Success',
+              result: dailyResult,
+            });
+          } catch (error) {
+            results.details.push({
+              date: AttendanceTimeUtil.formatDate(calcDate),
+              status: 'Failed',
+              error: error.message,
+            });
+          }
+        }),
+      );
     }
 
     return results;
   }
+
   async calculateDailyTimesheet(
     employeeId: string,
     date: Date,
@@ -243,13 +258,18 @@ export class AttendanceService {
     employeeIds: string[],
     date: Date,
   ): Promise<void> {
-    for (const id of employeeIds) {
-      try {
-        await this.attendanceEngine.calculateDailyForEmployee(id, date);
-      } catch (error) {
-        console.error(`Error calculating for employee ${id}:`, error);
-        // Có thể log hoặc throw tùy policy
-      }
+    const CHUNK_SIZE = 10;
+    for (let i = 0; i < employeeIds.length; i += CHUNK_SIZE) {
+      const chunk = employeeIds.slice(i, i + CHUNK_SIZE);
+      await Promise.all(
+        chunk.map(async (id) => {
+          try {
+            await this.attendanceEngine.calculateDailyForEmployee(id, date);
+          } catch (error) {
+            this.logger.error(`Error calculating for employee ${id}: ${error.message}`);
+          }
+        }),
+      );
     }
   }
 
@@ -267,12 +287,12 @@ export class AttendanceService {
       const isMonthOnly = /^\d{4}-\d{2}$/.test(date);
 
       if (isFullDate) {
-        qb.andWhere('CAST(timesheet.attendance_date AS DATE) = :attendanceDate', {
+        // SQL Server friendly: No redundant CAST if column is already 'date' type
+        qb.andWhere('timesheet.attendance_date = :attendanceDate', {
           attendanceDate: date,
         });
       } else if (isMonthOnly) {
         const [year, month] = date.split('-').map(Number);
-
         qb.andWhere('timesheet.year = :year', { year }).andWhere(
           'timesheet.month = :month',
           { month },
@@ -291,9 +311,9 @@ export class AttendanceService {
 
         return {
           'Họ và tên': ts.employee?.fullName || 'N/A',
-          'check-in': this.formatTimeToVietnam(ts.check_in_raw ?? undefined),
+          'check-in': AttendanceTimeUtil.formatTimeToVietnam(ts.check_in_raw ?? undefined),
           'user-id': ts.employee.userId,
-          'check-out': this.formatTimeToVietnam(ts.check_out_raw ?? undefined),
+          'check-out': AttendanceTimeUtil.formatTimeToVietnam(ts.check_out_raw ?? undefined),
           'Công điều chỉnh': parseFloat(String(ts.adjustment_hours ?? 0)),
           'Tổng công': parseFloat(String(ts.workday_count ?? 0)),
           'Nghỉ phép': parseFloat(String(ts.leave_hours ?? 0)),
@@ -305,35 +325,25 @@ export class AttendanceService {
         };
       });
     } catch (error) {
-      console.error('❌ getTimesheetByDate ERROR:', error);
+      this.logger.error('❌ getTimesheetByDate ERROR:', error);
       throw error;
     }
   }
 
-  private formatTimeToVietnam(date?: Date | string | null): string {
-    if (!date) return '--';
-
-    const d = new Date(date);
-    // Kiểm tra xem date có hợp lệ không
-    if (isNaN(d.getTime())) return '--';
-
-    const hours = d.getUTCHours() + 7;
-    const finalHours = hours >= 24 ? hours - 24 : hours;
-    const minutes = d.getUTCMinutes();
-
-    return `${finalHours}h${minutes.toString().padStart(2, '0')}`;
-  }
-
   async getMonthlyTimesheet(
     companyId: string,
-    month: number,
-    year: number,
+    month?: number,
+    year?: number,
     employeeId?: string,
   ) {
+    const now = new Date();
+    const targetMonth = month || now.getMonth() + 1;
+    const targetYear = year || now.getFullYear();
+
     const where: any = {
       company_id: companyId,
-      month,
-      year,
+      month: targetMonth,
+      year: targetYear,
     };
 
     if (employeeId) {
@@ -351,52 +361,50 @@ export class AttendanceService {
 
   async generateMonthlyTimesheet(
     companyId: string,
-    month: number,
-    year: number,
+    month?: number,
+    year?: number,
     employeeId?: string,
   ) {
+    const now = new Date();
+    const targetMonth = month || now.getMonth() + 1;
+    const targetYear = year || now.getFullYear();
+
+    this.logger.log(
+      `[Monthly Gen] Generating for company ${companyId}, month ${targetMonth}/${targetYear}, employee: ${employeeId || 'ALL'}`,
+    );
+
     const query = this.timesheetRepo
       .createQueryBuilder('d')
       .select('d.employee_id', 'employee_id')
       .addSelect('MAX(d.department_code)', 'department_code')
 
       .addSelect(
-        'SUM(d.actual_work_hours / NULLIF(d.total_work_hours_standard,0))',
+        'SUM(d.actual_work_hours / NULLIF(d.total_work_hours_standard, 0))',
         'total_work_days',
       )
-
       .addSelect('SUM(d.workday_count)', 'total_workday_count')
-
       .addSelect('SUM(d.actual_work_hours)', 'total_work_hours')
-
       .addSelect('SUM(d.late_minutes)', 'total_late_minutes')
-
       .addSelect(
         'SUM(CASE WHEN d.is_late = true THEN 1 ELSE 0 END)',
         'total_late_days',
       )
-
       .addSelect(
         'SUM(CASE WHEN d.is_early_leave = true THEN 1 ELSE 0 END)',
         'total_early_leave_days',
       )
-
       .addSelect('SUM(d.early_leave_minutes)', 'total_early_leave_minutes')
-
       .addSelect(
         'SUM(CASE WHEN d.missing_check_in OR d.missing_check_out THEN 1 ELSE 0 END)',
         'total_missing_check',
       )
-
       .addSelect('SUM(d.ot_hours)', 'total_ot_hours')
-
       .addSelect('SUM(d.leave_hours / 8)', 'total_leave_days')
-
       .addSelect('SUM(d.remote_hours / 8)', 'total_remote_days')
 
       .where('d.company_id = :companyId', { companyId })
-      .andWhere('d.month = :month', { month })
-      .andWhere('d.year = :year', { year })
+      .andWhere('d.month = :month', { month: targetMonth })
+      .andWhere('d.year = :year', { year: targetYear })
       .groupBy('d.employee_id');
 
     if (employeeId) {
@@ -405,14 +413,17 @@ export class AttendanceService {
 
     const stats = await query.getRawMany();
 
-    if (!stats.length) return [];
+    if (!stats.length) {
+      this.logger.warn('No data found for the specified period.');
+      return [];
+    }
 
     const records = stats.map((s) => ({
       company_id: companyId,
       employee_id: s.employee_id,
       department_code: s.department_code || '',
-      month,
-      year,
+      month: targetMonth,
+      year: targetYear,
       total_work_days: parseFloat(s.total_work_days || 0),
       total_workday_count: parseFloat(s.total_workday_count || 0),
       total_work_hours: parseFloat(s.total_work_hours || 0),
@@ -432,14 +443,5 @@ export class AttendanceService {
     });
 
     return records;
-  }
-
-  private formatDate(date: Date): string {
-    const d = new Date(date);
-    const month = '' + (d.getMonth() + 1);
-    const day = '' + d.getDate();
-    const year = d.getFullYear();
-
-    return [year, month.padStart(2, '0'), day.padStart(2, '0')].join('-');
   }
 }
